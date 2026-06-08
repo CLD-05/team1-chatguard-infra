@@ -10,6 +10,7 @@ output "db_username" {
 
 output "db_password" {
   description = "임의 생성된 데이터베이스 마스터 패스워드 (민감 정보 보호)"
-  value       = aws_db_instance.this.password
+  value       = random_password.password.result
   sensitive   = true
 }
+

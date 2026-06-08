@@ -13,9 +13,9 @@ variable "isolated_subnet_ids" {
   type        = list(string)
 }
 
-variable "eks_node_security_group_id" {
-  description = "EKS 워커 노드의 보안 그룹 ID (이 그룹만 DB 접근 허용)"
-  type        = string
+variable "allowed_security_groups" {
+  description = "RDS에 접근을 허용할 보안 그룹 ID 리스트 (EKS 노드, Bastion 등)"
+  type        = list(string)
 }
 
 variable "instance_class" {

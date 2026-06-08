@@ -43,6 +43,9 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+# 개발자별 OS/아키텍처에 따른 플러그인 락 파일 커밋 방지
+.terraform.lock.hcl
+
 # .terraform 폴더 안에는 몇 백 MB짜리 AWS 프로바이더 바이너리 플러그인이 로컬 다운로드되므로 커밋 금지
 .terraform/
 
