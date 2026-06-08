@@ -48,3 +48,24 @@ module "elasticache" {
 
   node_type = "cache.t4g.micro"
 }
+
+# 도커 컴포넌트 저장 기지 (ECR) 조립
+module "ecr" {
+  source = "../../../modules/ecr"
+  repository_names = [
+    "${local.name_prefix}-api-server", # 백엔드 Spring API 서버용 저장소
+    "${local.name_prefix}-ai-worker"   # AI 모더레이션 Python 워커용 저장소
+  ]
+}
+
+# 애플리케이션 유저 파일 업로드용 S3 스토리지 조립
+module "s3" {
+  source      = "../../../modules/s3"
+  bucket_name = "${local.name_prefix}-chatguard-assets"
+}
+
+# 대외 서비스 창구 도메인(Route53) 호스팅 존 조립
+module "route53" {
+  source      = "../../../modules/route53"
+  domain_name = "chatguard.store" # 👈 팀의 실제 도메인 주소(또는 임시 주소)로 세팅
+}
