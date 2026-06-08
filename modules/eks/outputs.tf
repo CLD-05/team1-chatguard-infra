@@ -12,3 +12,8 @@ output "cluster_certificate_authority_data" {
   description = "Kubernetes API 서버 인증용 CA 데이터"
   value       = aws_eks_cluster.this.certificate_authority[0].data
 }
+
+output "node_security_group_id" {
+  description = "EKS 관리형 노드 그룹이 자동으로 생성한 EC2 보안 그룹 ID"
+  value       = aws_eks_node_group.this.resources[0].remote_access_security_group_id
+}
