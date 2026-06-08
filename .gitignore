@@ -1,3 +1,6 @@
+# =========================================================================
+# ☕ Java / Spring Boot 백엔드 설정 (기존 유지)
+# =========================================================================
 # Compiled class file
 *.class
 
@@ -19,6 +22,43 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# =========================================================================
+# 🌍 Terraform (테라폼 관련 필수 격리 설정)
+# =========================================================================
+# ⚠️ 로컬 테스트용 상태 파일 절대 금지 (State 유실 및 충돌 방지)
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*
+
+# ⚠️ 개발자 개인 로컬 변수 값 파일 (여기에 Slack Webhook, DB 비번 등을 임시로 넣을 수 있으므로 커밋 절대 금지)
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# .terraform 폴더 안에는 몇 백 MB짜리 AWS 프로바이더 바이너리 플러그인이 로컬 다운로드되므로 커밋 금지
+.terraform/
+
+# CLI 실행 중 생성되는 임시 파일들
+.terraform.tfstate.lock.info
+
+# =========================================================================
+# 🔑 IDE / OS & 보안 민감 정보
+# =========================================================================
+# IntelliJ / VS Code 환경 설정 파일
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 환경 변수 및 웹훅 키 숨김용 (.env 파일 등)
+.env
+.env.*
