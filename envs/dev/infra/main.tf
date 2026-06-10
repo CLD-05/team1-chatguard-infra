@@ -1,7 +1,7 @@
 # envs/dev/infra/main.tf
 
 locals {
-  name_prefix = "team1-chatguard-dev"
+  name_prefix = "team1-dev"
 }
 
 # 네트워크 인프라 대지 조성
