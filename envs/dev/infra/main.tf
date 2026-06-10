@@ -36,6 +36,8 @@ module "database" {
   ]
 
   instance_class = "db.t4g.micro"
+  # EKS 모듈이 완벽히 완공되어 SG ID가 확정될 때까지 DB 생성을 대기
+  depends_on = [module.eks]
 }
 
 # 고속 세션 및 pub/sub용 캐시 서버 배치
@@ -51,6 +53,8 @@ module "elasticache" {
   ]
 
   node_type = "cache.t4g.micro"
+  # Redis도 EKS 모듈 완공 후에 진격하도록 락
+  depends_on = [module.eks]
 }
 
 # 도커 컴포넌트 저장 기지 (ECR) 조립
