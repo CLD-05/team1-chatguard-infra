@@ -8,11 +8,11 @@ resource "aws_security_group" "redis" {
 
   # 🔒 하드닝: 오직 우리 EKS 노드 그룹만 Redis 기본 포트(6379)로 진입 허용
   ingress {
-    description     = "Redis from EKS Nodes"
+    description     = "Redis from Allowed Security Groups"
     from_port       = 6379
     to_port         = 6379
     protocol        = "tcp"
-    security_groups = [var.eks_node_security_group_id]
+    security_groups = var.allowed_security_groups
   }
 
   egress {

@@ -8,11 +8,11 @@ resource "aws_security_group" "db" {
 
   # 🔒 하드닝: 오직 EKS 노드 그룹 보안 그룹을 가진 자원만 3306 포트로 진입 허용
   ingress {
-    description     = "MySQL from EKS Nodes"
+    description     = "MySQL from Allowed Security Groups"
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [var.eks_node_security_group_id]
+    security_groups = var.allowed_security_groups
   }
 
   # 아웃바운드는 기본적으로 전부 허용

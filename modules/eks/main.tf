@@ -4,6 +4,8 @@
 resource "aws_iam_role" "cluster" {
   name = "${var.cluster_name}-role"
 
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -29,7 +31,7 @@ resource "aws_eks_cluster" "this" {
 
   vpc_config {
     subnet_ids              = var.subnet_ids
-    endpoint_private_access = true # 하드닝: 클러스터 내부 통신 보안 강화
+    endpoint_private_access = true
     endpoint_public_access  = true # 로컬 PC에서 kubectl 제어를 위해 일단 허용
   }
 
@@ -43,6 +45,8 @@ resource "aws_eks_cluster" "this" {
 # =========================================================================
 resource "aws_iam_role" "node" {
   name = "${var.cluster_name}-node-role"
+
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

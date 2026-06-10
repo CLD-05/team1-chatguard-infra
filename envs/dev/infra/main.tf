@@ -30,8 +30,10 @@ module "database" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  # 의존성 체이닝: EKS가 생성한 노드 보안 그룹을 받아 방화벽에 주입
-  eks_node_security_group_id = module.eks.node_security_group_id
+  allowed_security_groups = [
+    module.eks.node_security_group_id, # 기존 EKS 노드 진입 허용
+    aws_security_group.bastion.id      # [추가] Bastion 호스트의 진입도 추가 허용
+  ]
 
   instance_class = "db.t4g.micro"
 }
@@ -43,8 +45,10 @@ module "elasticache" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  # 의존성 체이닝: 역시 EKS 노드 그룹만 접근 가능하도록 락킹
-  eks_node_security_group_id = module.eks.node_security_group_id
+  allowed_security_groups = [
+    module.eks.node_security_group_id, # 기존 EKS 노드 진입 허용
+    aws_security_group.bastion.id      # [추가] Bastion 호스트의 진입도 추가 허용
+  ]
 
   node_type = "cache.t4g.micro"
 }

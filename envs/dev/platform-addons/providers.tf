@@ -30,27 +30,26 @@ data "terraform_remote_state" "infra" {
   }
 }
 
-# 🔒 하드닝: EKS 클러스터 정보를 받아와서 쿠버네티스 공급자 동적 잠금 유도
 provider "kubernetes" {
-  host                   = data.terraform_remote_state.infra.outputs.cluster_endpoint
-  cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.cluster_certificate_authority_data)
+  host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority)
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"]
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.cluster_name, "--profile", "final"]
   }
 }
 
 provider "helm" {
   kubernetes {
-    host                   = data.terraform_remote_state.infra.outputs.cluster_endpoint
-    cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.cluster_certificate_authority_data)
+    host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority)
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"]
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.cluster_name, "--profile", "final"]
     }
   }
-}   
+}
