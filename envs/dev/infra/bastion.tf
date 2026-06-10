@@ -81,5 +81,11 @@ resource "aws_instance" "bastion" {
     delete_on_termination = true
   }
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
   tags = { Name = "${local.name_prefix}-bastion-host" }
 }

@@ -16,7 +16,7 @@ output "eks_cluster_certificate_authority" {
 }
 
 output "grafana_admin_password" {
-  description = "Grafana admin password (RDS 마스터 패스워드 재사용)"
-  value       = module.database.db_password
+  description = "Grafana 전용 독립 어드민 패스워드 (RDS 자격증명 재사용 차단)"
+  value       = random_password.grafana_password.result
   sensitive   = true
 }

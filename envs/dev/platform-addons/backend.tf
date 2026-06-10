@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket       = "tfstate-my-personal-sandbox"
+    bucket       = "tfstate-lionkdt5-team1"
     key          = "team1/dev/platform-addons/terraform.tfstate"
     region       = "ap-northeast-2"
     encrypt      = true
