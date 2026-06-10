@@ -10,15 +10,16 @@ resource "aws_security_group" "redis" {
   dynamic "ingress" {
     for_each = var.allowed_security_groups
     content {
-      description     = "MySQL from Allowed Security Groups"
-      from_port       = 3306
-      to_port         = 3306
+      description     = "Redis from Allowed Security Groups"
+      from_port       = 6379
+      to_port         = 6379
       protocol        = "tcp"
       security_groups = [ingress.value]
     }
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
