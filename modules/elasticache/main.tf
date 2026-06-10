@@ -7,15 +7,19 @@ resource "aws_security_group" "redis" {
   vpc_id      = var.vpc_id
 
   # 🔒 하드닝: 오직 우리 EKS 노드 그룹만 Redis 기본 포트(6379)로 진입 허용
-  ingress {
-    description     = "Redis from Allowed Security Groups"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = var.allowed_security_groups
+  dynamic "ingress" {
+    for_each = var.allowed_security_groups
+    content {
+      description     = "Redis from Allowed Security Groups"
+      from_port       = 6379
+      to_port         = 6379
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
