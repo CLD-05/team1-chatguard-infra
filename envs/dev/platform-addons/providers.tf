@@ -30,22 +30,26 @@ data "terraform_remote_state" "infra" {
   }
 }
 
-# =========================================================================
-# Kubernetes 공급자 설정
-# =========================================================================
 provider "kubernetes" {
-  host                   = try(data.aws_eks_cluster.this.endpoint, "")
-  cluster_ca_certificate = base64decode(try(data.aws_eks_cluster.this.certificate_authority[0].data, ""))
-  token                  = try(data.aws_eks_cluster_auth.this.token, "")
+  host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name]
+    command     = "aws"
+  }
 }
 
-# =========================================================================
-# Helm 공급자 설정 
-# =========================================================================
 provider "helm" {
   kubernetes {
-    host                   = try(data.aws_eks_cluster.this.endpoint, "")
-    cluster_ca_certificate = base64decode(try(data.aws_eks_cluster.this.certificate_authority[0].data, ""))
-    token                  = try(data.aws_eks_cluster_auth.this.token, "")
+    host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name]
+      command     = "aws"
+    }
   }
-} 
+}

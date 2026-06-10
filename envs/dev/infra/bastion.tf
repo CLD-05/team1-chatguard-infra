@@ -17,11 +17,8 @@ data "aws_ami" "amazon_linux_2023" {
 resource "aws_security_group" "bastion" {
   name        = "${local.name_prefix}-bastion-sg"
   description = "Bastion Host Security Group (No Ingress 22, SSM Only)"
-  vpc_id      = module.network.vpc_id # 1주차 네트워크 모듈의 VPC ID 참조
+  vpc_id      = module.network.vpc_id
 
-  # 인바운드(들어오는 문)를 완전히 비워둡니다. (SSM 대리인이 안에서 밖으로 터널을 뚫기 때문)
-
-  # 아웃바운드(나가는 문): 내부망 및 패키지 업데이트를 위해 전체 허용
   egress {
     from_port        = 0
     to_port          = 0
@@ -38,6 +35,8 @@ resource "aws_security_group" "bastion" {
 # =========================================================================
 resource "aws_iam_role" "bastion_ssm" {
   name = "${local.name_prefix}-bastion-ssm-role"
+
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -70,13 +69,11 @@ resource "aws_instance" "bastion" {
   ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = "t3.micro" # dev 환경이므로 가장 가성비 좋은 micro 스펙 적용
 
-  # 💡 중요: 유저가 디딤돌로 밟고 들어와야 하므로 Public 서브넷 첫 번째 방에 배치합니다.
   subnet_id = module.network.public_subnet_ids[0]
 
   vpc_security_group_ids = [aws_security_group.bastion.id]
   iam_instance_profile   = aws_iam_instance_profile.bastion_profile.name
 
-  # 실무 하드닝: 루트 볼륨 암호화 및 gp3 스토리지 규격 적용
   root_block_device {
     volume_type           = "gp3"
     volume_size           = 8
