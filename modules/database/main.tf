@@ -7,12 +7,15 @@ resource "aws_security_group" "db" {
   vpc_id      = var.vpc_id
 
   # 🔒 하드닝: 오직 EKS 노드 그룹 보안 그룹을 가진 자원만 3306 포트로 진입 허용
-  ingress {
-    description     = "MySQL from Allowed Security Groups"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = var.allowed_security_groups
+  dynamic "ingress" {
+    for_each = var.allowed_security_groups
+    content {
+      description     = "MySQL from Allowed Security Groups"
+      from_port       = 3306
+      to_port         = 3306
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
   }
 
   # 아웃바운드는 기본적으로 전부 허용
