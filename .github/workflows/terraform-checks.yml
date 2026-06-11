@@ -1,0 +1,72 @@
+# team1-chatguard-infra/.github/workflows/terraform-checks.yml
+#
+# Terraform 정적 검사 — AI 토큰 소모 없음, AWS 자격증명 불필요(09~18시 제약 무관)
+#   1) fmt 검사 (포맷 위반 diff 출력)
+#   2) 루트별 init -backend=false + validate (state·AWS 접근 없이 문법·참조 검증)
+#   3) checkov 보안 스캔 (시작은 soft_fail=true 리포트 모드 — 베이스라인 정리 후 false로 전환)
+#
+# Claude 리뷰와의 분업: 결정적 검사는 여기서, 설계·규칙 리뷰는 @claude가.
+# (review-infra.md 가 이 워크플로 결과를 get_ci_status 로 읽어 리뷰에 반영)
+
+name: Terraform Checks
+
+on:
+  pull_request:
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+      - "**/.terraform.lock.hcl"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tf-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true   # 결정적 검사라 이전 커밋 런은 취소해도 안전
+
+jobs:
+  fmt-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.x"   # 팀 표준 1.14.x — 운전자 로컬과 패치버전까지 맞추려면 고정값으로
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform validate (루트별)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          roots=(envs/*/*/)
+          if [ ${#roots[@]} -eq 0 ]; then
+            echo "envs/ 아래 루트가 아직 없음 — validate 생략"
+            exit 0
+          fi
+          fail=0
+          for dir in "${roots[@]}"; do
+            echo "================ ${dir}"
+            terraform -chdir="${dir}" init -backend=false -input=false -no-color >/dev/null
+            terraform -chdir="${dir}" validate -no-color || fail=1
+          done
+          exit ${fail}
+
+  checkov:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: checkov scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          quiet: true          # 실패 항목만 출력
+          soft_fail: true      # 리포트 모드. 베이스라인 정리되면 false 로 바꿔 게이트화
+          skip_path: ".terraform"
