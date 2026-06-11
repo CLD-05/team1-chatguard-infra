@@ -12,8 +12,7 @@ data "aws_secretsmanager_secret_version" "grafana_secret_val" {
 }
 
 locals {
-  # 금고 안에 {"password": "비밀번호원문"} 구조로 보관된 값을 추출하여 로컬 변수에 안착
-  grafana_password = jsondecode(data.aws_secretsmanager_secret_version.grafana_secret_val.secret_string)["password"]
+  grafana_password = sensitive(jsondecode(data.aws_secretsmanager_secret_version.grafana_secret_val.secret_string)["password"])
 }
 
 # ------------------------------------------------------------------------------
