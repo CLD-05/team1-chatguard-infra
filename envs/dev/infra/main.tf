@@ -30,13 +30,12 @@ module "database" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  allowed_security_groups = compact([
-    try(module.eks.node_security_group_id, ""),
-    try(aws_security_group.bastion.id, "")
-  ])
+  allowed_security_groups = [
+    module.eks.node_security_group_id,
+    aws_security_group.bastion.id
+  ]
 
   instance_class = "db.t4g.micro"
-  depends_on     = [module.eks]
 }
 
 # 고속 세션 및 pub/sub용 캐시 서버 배치
@@ -46,13 +45,12 @@ module "elasticache" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  allowed_security_groups = compact([
-    try(module.eks.node_security_group_id, ""),
-    try(aws_security_group.bastion.id, "")
-  ])
+  allowed_security_groups = [
+    module.eks.node_security_group_id,
+    aws_security_group.bastion.id
+  ]
 
-  node_type  = "cache.t4g.micro"
-  depends_on = [module.eks]
+  node_type = "cache.t4g.micro"
 }
 
 # 도커 컴포넌트 저장 기지 (ECR) 조립
