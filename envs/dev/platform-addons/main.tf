@@ -34,6 +34,8 @@ resource "helm_release" "prometheus_stack" {
   version    = "69.8.2"
   namespace  = "monitoring"
 
+  create_namespace = true
+
   values = [
     yamlencode({
       grafana = {
