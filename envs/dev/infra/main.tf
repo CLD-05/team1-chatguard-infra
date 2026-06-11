@@ -31,7 +31,7 @@ module "database" {
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
   allowed_security_groups = [
-    module.eks.node_security_group_id,
+    module.eks.cluster_managed_security_group_id,
     aws_security_group.bastion.id
   ]
 
@@ -46,7 +46,7 @@ module "elasticache" {
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
   allowed_security_groups = [
-    module.eks.node_security_group_id,
+    module.eks.cluster_managed_security_group_id,
     aws_security_group.bastion.id
   ]
 
