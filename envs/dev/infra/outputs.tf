@@ -14,9 +14,3 @@ output "eks_cluster_certificate_authority" {
   description = "EKS 클러스터 CA 인증서 데이터"
   value       = module.eks.cluster_certificate_authority_data
 }
-
-output "grafana_admin_password" {
-  description = "Grafana 전용 독립 어드민 패스워드 (RDS 자격증명 재사용 차단)"
-  value       = random_password.grafana_password.result
-  sensitive   = true
-}
