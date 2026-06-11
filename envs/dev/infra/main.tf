@@ -30,14 +30,13 @@ module "database" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  allowed_security_groups = [
-    module.eks.node_security_group_id, # 기존 EKS 노드 진입 허용
-    aws_security_group.bastion.id      # [추가] Bastion 호스트의 진입도 추가 허용
-  ]
+  allowed_security_groups = compact([
+    try(module.eks.node_security_group_id, ""),
+    try(aws_security_group.bastion.id, "")
+  ])
 
   instance_class = "db.t4g.micro"
-  # EKS 모듈이 완벽히 완공되어 SG ID가 확정될 때까지 DB 생성을 대기
-  depends_on = [module.eks]
+  depends_on     = [module.eks]
 }
 
 # 고속 세션 및 pub/sub용 캐시 서버 배치
@@ -47,13 +46,12 @@ module "elasticache" {
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
 
-  allowed_security_groups = [
-    module.eks.node_security_group_id, # 기존 EKS 노드 진입 허용
-    aws_security_group.bastion.id      # [추가] Bastion 호스트의 진입도 추가 허용
-  ]
+  allowed_security_groups = compact([
+    try(module.eks.node_security_group_id, ""),
+    try(aws_security_group.bastion.id, "")
+  ])
 
-  node_type = "cache.t4g.micro"
-  # Redis도 EKS 모듈 완공 후에 진격하도록 락
+  node_type  = "cache.t4g.micro"
   depends_on = [module.eks]
 }
 
