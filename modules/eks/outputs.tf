@@ -13,7 +13,7 @@ output "cluster_certificate_authority_data" {
   value       = aws_eks_cluster.this.certificate_authority[0].data
 }
 
-output "node_security_group_id" {
-  description = "EKS Node Group 클러스터 관리형 노드 보안 그룹 ID"
+output "cluster_managed_security_group_id" {
+  description = "EKS Cluster가 자체적으로 생성 및 관리하는 기본 보안 그룹 ID"
   value       = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
 }
