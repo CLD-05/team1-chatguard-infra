@@ -47,4 +47,5 @@ variable "iam_role_permissions_boundary" {
 variable "eks_public_access_cidrs" {
   type        = list(string)
   description = "EKS 클러스터 Endpoint에 접근을 허용할 승인된 공인 IP 대역 리스트"
+  nullable    = false
 }
