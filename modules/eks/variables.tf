@@ -27,12 +27,12 @@ variable "desired_size" {
 
 variable "iam_role_permissions_boundary" {
   type        = string
-  description = "IAM Role permissions boundary ARN"
-  default     = false # 실수로 생략 시 테라폼이 배포를 차단함
+  description = "AWS IAM Role 생성 제한을 위한 Permissions Boundary ARN"
+  nullable    = false
 }
 
 variable "public_access_cidrs" {
   type        = list(string)
   description = "EKS 클러스터 Public Endpoint에 접근 허용할 IP 대역 리스트"
-  default     = ["0.0.0.0/0"] # dev 환경 등 값이 안 넘어오면 기본적으로 전체 오픈되도록 안전장치
+  nullable    = false
 }

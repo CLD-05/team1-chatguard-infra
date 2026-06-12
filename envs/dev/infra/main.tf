@@ -19,8 +19,8 @@ module "eks" {
   vpc_id       = module.network.vpc_id
   subnet_ids   = module.network.private_subnet_ids
 
-  instance_types = ["t3.medium"]
-  desired_size   = 2
+  iam_role_permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+  public_access_cidrs           = ["0.0.0.0/0"] # dev는 로컬 PC 어디서나 접근할 수 있도록 전체 오픈 유지
 }
 
 # 완전 격리망 보안 데이터베이스 안착
