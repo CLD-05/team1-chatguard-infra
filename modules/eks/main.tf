@@ -33,6 +33,8 @@ resource "aws_eks_cluster" "this" {
     subnet_ids              = var.subnet_ids
     endpoint_private_access = true
     endpoint_public_access  = true # 로컬 PC에서 kubectl 제어를 위해 일단 허용
+
+    public_access_cidrs = var.public_access_cidrs
   }
 
   depends_on = [

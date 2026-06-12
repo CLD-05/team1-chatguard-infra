@@ -12,13 +12,16 @@ module "network" {
 }
 
 module "eks" {
-  source                        = "../../../modules/eks"
-  cluster_name                  = "${local.name_prefix}-cluster"
-  vpc_id                        = module.network.vpc_id
-  subnet_ids                    = module.network.private_subnet_ids
-  instance_types                = var.eks_instance_types
-  desired_size                  = var.eks_desired_size
+  source         = "../../../modules/eks"
+  cluster_name   = "${local.name_prefix}-cluster"
+  vpc_id         = module.network.vpc_id
+  subnet_ids     = module.network.private_subnet_ids
+  instance_types = var.eks_instance_types
+  desired_size   = var.eks_desired_size
+
   iam_role_permissions_boundary = var.iam_role_permissions_boundary
+
+  public_access_cidrs = var.eks_public_access_cidrs
 }
 
 module "database" {

@@ -1,0 +1,13 @@
+team     = "team1"
+env      = "prod"
+vpc_cidr = "10.1.128.0/17"
+
+eks_instance_types = ["t3.large"]
+eks_desired_size   = 3 # 가용구역 3곳에 분산 배치 (HA)
+rds_instance_class = "db.t4g.small"
+redis_node_type    = "cache.t4g.small"
+domain_name        = "chatguard.store"
+
+eks_public_access_cidrs = [
+  "0.0.0.0/32"     # 👈 여기에 실제 접근 허용할 IP를 적으세요
+]
