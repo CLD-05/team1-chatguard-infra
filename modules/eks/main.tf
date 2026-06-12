@@ -4,7 +4,7 @@
 resource "aws_iam_role" "cluster" {
   name = "${var.cluster_name}-role"
 
-  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+  permissions_boundary = var.iam_role_permissions_boundary
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -46,7 +46,7 @@ resource "aws_eks_cluster" "this" {
 resource "aws_iam_role" "node" {
   name = "${var.cluster_name}-node-role"
 
-  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+  permissions_boundary = var.iam_role_permissions_boundary
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

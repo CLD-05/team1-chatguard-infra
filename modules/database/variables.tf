@@ -23,3 +23,27 @@ variable "instance_class" {
   type        = string
   default     = "db.t4g.micro"
 }
+
+variable "deletion_protection" {
+  type        = bool
+  description = "데이터베이스 임의 삭제 방지 활성화 여부"
+  default     = false # dev 환경은 쉽게 지울 수 있게 false 기본값
+}
+
+variable "skip_final_snapshot" {
+  type        = bool
+  description = "DB 삭제 시 최종 스냅샷 생성 건너뛰기 여부"
+  default     = true # dev 환경은 스냅샷 없이 빠르게 지우도록 true 기본값
+}
+
+variable "backup_retention_period" {
+  type        = number
+  description = "자동 백업 보존 기간 (일 단위)"
+  default     = 0 # dev 환경은 백업 비용을 아끼기 위해 0일 기본값
+}
+
+variable "multi_az" {
+  type        = bool
+  description = "다중 가용구역(Multi-AZ) 고가용성 복제 활성화 여부"
+  default     = false # dev 환경은 단일 AZ로 비용 최적화
+}
