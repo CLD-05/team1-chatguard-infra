@@ -29,6 +29,7 @@ provider "aws" {
       Project     = "chatguard"
       Owner       = "infra-lead"
     }
+  }
 }
 
 # ==============================================================================
@@ -38,7 +39,7 @@ data "terraform_remote_state" "infra" {
   backend = "s3"
   config = {
     bucket = "tfstate-lionkdt5-team1"
-    key    = "team1/prod/infra/terraform.tfstate"
+    key    = "prod/infra/terraform.tfstate"
     region = "ap-northeast-2"
   }
 }
