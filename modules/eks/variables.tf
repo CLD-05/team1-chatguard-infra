@@ -27,6 +27,12 @@ variable "desired_size" {
 
 variable "iam_role_permissions_boundary" {
   type        = string
-  description = "IAM Role permissions boundary ARN"
-  default     = null # dev 등 변수가 안 넘어올 때를 대비해 기본값 null 지정
+  description = "AWS IAM Role 생성 제한을 위한 Permissions Boundary ARN"
+  nullable    = false
+}
+
+variable "public_access_cidrs" {
+  type        = list(string)
+  description = "EKS 클러스터 Public Endpoint에 접근 허용할 IP 대역 리스트"
+  nullable    = false
 }
