@@ -12,13 +12,13 @@ module "network" {
 }
 
 module "eks" {
-  source       = "../../../modules/eks"
-  cluster_name = "${local.name_prefix}-cluster"
-  vpc_id       = module.network.vpc_id
-  subnet_ids   = module.network.private_subnet_ids
-
-  instance_types = var.eks_instance_types
-  desired_size   = var.eks_desired_size
+  source                        = "../../../modules/eks"
+  cluster_name                  = "${local.name_prefix}-cluster"
+  vpc_id                        = module.network.vpc_id
+  subnet_ids                    = module.network.private_subnet_ids
+  instance_types                = var.eks_instance_types
+  desired_size                  = var.eks_desired_size
+  iam_role_permissions_boundary = var.iam_role_permissions_boundary
 }
 
 module "database" {
@@ -33,6 +33,12 @@ module "database" {
   ]
 
   instance_class = var.rds_instance_class
+
+  # 운영계 전용 삭제 방지 및 고가용성 파라미터 명시적 강제 주입
+  deletion_protection     = true
+  skip_final_snapshot     = false
+  backup_retention_period = 7
+  multi_az                = true
 }
 
 module "elasticache" {

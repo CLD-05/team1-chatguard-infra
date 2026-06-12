@@ -24,3 +24,9 @@ variable "desired_size" {
   type        = number
   default     = 2
 }
+
+variable "iam_role_permissions_boundary" {
+  type        = string
+  description = "IAM Role permissions boundary ARN"
+  default     = null # dev 등 변수가 안 넘어올 때를 대비해 기본값 null 지정
+}

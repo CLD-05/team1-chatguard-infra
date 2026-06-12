@@ -21,6 +21,14 @@ terraform {
 provider "aws" {
   region  = "ap-northeast-2"
   profile = "final-prod"
+
+  default_tags {
+    tags = {
+      Team        = "team1"
+      Environment = "prod"
+      Project     = "chatguard"
+      Owner       = "infra-lead"
+    }
 }
 
 # ==============================================================================
@@ -29,7 +37,7 @@ provider "aws" {
 data "terraform_remote_state" "infra" {
   backend = "s3"
   config = {
-    bucket = "team1-prod-tfstate"
+    bucket = "tfstate-lionkdt5-team1"
     key    = "team1/prod/infra/terraform.tfstate"
     region = "ap-northeast-2"
   }
