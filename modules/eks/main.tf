@@ -32,7 +32,8 @@ resource "aws_eks_cluster" "this" {
   # 접근 관리를 access entry(API) 방식으로 전환.
   # CONFIG_MAP → API_AND_CONFIG_MAP 은 안전한 단방향 전환(기존 aws-auth 권한 유지).
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
   }
 
   vpc_config {
