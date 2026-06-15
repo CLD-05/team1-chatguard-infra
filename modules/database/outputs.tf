@@ -9,8 +9,8 @@ output "db_username" {
 }
 
 output "db_password" {
-  description = "임의 생성된 데이터베이스 마스터 패스워드 (민감 정보 보호)"
-  value       = random_password.password.result
+  description = "dev일 때만 비밀번호를 출력하고, prod일 때는 빈 값을 반환하여 장부를 보호합니다."
+  value       = var.environment == "prod" ? "" : random_password.password[0].result
   sensitive   = true
 }
 
