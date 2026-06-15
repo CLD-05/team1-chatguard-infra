@@ -10,7 +10,7 @@ output "db_username" {
 
 output "db_password" {
   description = "dev 환경용 마스터 비밀번호 (prod는 빈 값)"
-  value       = var.environment == "prod" ? "" : one(random_password.password[*].result)
+  value       = var.environment == "prod" ? null : one(random_password.password[*].result)
   sensitive   = true
 }
 

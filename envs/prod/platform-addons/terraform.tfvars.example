@@ -3,7 +3,13 @@
 team = "team1"
 env  = "prod"
 
-# 오픈소스 플랫폼 Helm 차트 버전 정의 (팀의 표준 버전을 예시로 기재)
+# =========================================================================
+# 인프라 핵심 오픈소스 플랫폼 Helm 차트 버전 정의 (CLAUDE.md 표준 준수)
+# =========================================================================
 argocd_chart_version     = "7.3.1"
 prometheus_stack_version = "69.8.2"
 keda_chart_version       = "2.12.0"
+
+external_secrets_chart_version   = "0.9.11" # External Secrets Operator (ESO)
+aws_lbc_chart_version            = "1.7.2"  # AWS Load Balancer Controller (LBC)
+redis_exporter_chart_version     = "0.15.0" # Prometheus Redis Exporter
