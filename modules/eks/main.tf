@@ -29,6 +29,12 @@ resource "aws_eks_cluster" "this" {
   role_arn = aws_iam_role.cluster.arn
   version  = "1.35"
 
+  # 접근 관리를 access entry(API) 방식으로 전환.
+  # CONFIG_MAP → API_AND_CONFIG_MAP 은 안전한 단방향 전환(기존 aws-auth 권한 유지).
+  access_config {
+    authentication_mode = "API_AND_CONFIG_MAP"
+  }
+
   vpc_config {
     subnet_ids              = var.subnet_ids
     endpoint_private_access = true
@@ -101,4 +107,29 @@ resource "aws_eks_node_group" "this" {
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly
   ]
+}
+
+# =========================================================================
+# 5. EKS Access Entry — 팀원 IAM 유저를 클러스터 접근자로 명시 등록
+# =========================================================================
+resource "aws_eks_access_entry" "admins" {
+  for_each = toset(var.cluster_admin_principals)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "admins" {
+  for_each = toset(var.cluster_admin_principals)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.admins]
 }

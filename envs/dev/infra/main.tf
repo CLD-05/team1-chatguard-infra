@@ -21,6 +21,8 @@ module "eks" {
 
   iam_role_permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
   public_access_cidrs           = var.eks_public_access_cidrs
+
+  cluster_admin_principals = var.eks_cluster_admin_principals
 }
 
 # 완전 격리망 보안 데이터베이스 안착

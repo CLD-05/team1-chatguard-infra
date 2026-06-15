@@ -18,3 +18,15 @@ variable "eks_public_access_cidrs" {
   description = "EKS 클러스터 Endpoint에 접근을 허용할 승인된 공인 IP 대역 리스트"
   default     = ["0.0.0.0/0"] # dev는 기본값으로 전체 오픈
 }
+
+variable "eks_cluster_admin_principals" {
+  description = "EKS 클러스터 관리자 접근 IAM 유저 ARN 목록(팀원)."
+  type        = list(string)
+  default = [
+    "arn:aws:iam::495599735720:user/team1-cjc",
+    "arn:aws:iam::495599735720:user/team1-ykh",
+    "arn:aws:iam::495599735720:user/team1-ssm",
+    "arn:aws:iam::495599735720:user/team1-lhc",
+    "arn:aws:iam::495599735720:user/team1-kwy",
+  ]
+}

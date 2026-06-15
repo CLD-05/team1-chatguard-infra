@@ -36,3 +36,9 @@ variable "public_access_cidrs" {
   description = "EKS 클러스터 Public Endpoint에 접근 허용할 IP 대역 리스트"
   nullable    = false
 }
+
+variable "cluster_admin_principals" {
+  description = "EKS 클러스터 관리자 접근을 부여할 IAM Principal ARN 목록(팀원 IAM 유저)."
+  type        = list(string)
+  default     = []
+}
