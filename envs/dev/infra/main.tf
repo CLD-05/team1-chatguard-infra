@@ -60,7 +60,8 @@ module "ecr" {
   source = "../../../modules/ecr"
   repository_names = [
     "${local.name_prefix}-api-server", # 백엔드 Spring API 서버용 저장소
-    "${local.name_prefix}-ai-worker"   # AI 모더레이션 Python 워커용 저장소
+    "${local.name_prefix}-ai-worker",  # AI 모더레이션 Python 워커용 저장소
+    "${local.name_prefix}-frontend"    # React 프론트엔드(nginx 서빙)용 저장소
   ]
 }
 
