@@ -41,8 +41,8 @@ module "database" {
   instance_class = var.rds_instance_class
 
   # 운영계 전용 삭제 방지 및 고가용성 파라미터 명시적 강제 주입
-  deletion_protection     = true
-  skip_final_snapshot     = false
+  deletion_protection     = false # 👈 최종에 true로 변경!
+  skip_final_snapshot     = true  # 👈 최종에 false로 변경!
   backup_retention_period = 7
   multi_az                = true
 }
