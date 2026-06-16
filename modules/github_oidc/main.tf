@@ -54,7 +54,7 @@ data "aws_iam_policy_document" "assume" {
     # audience 고정: 우리 토큰의 aud == sts.amazonaws.com 이어야 함
     condition {
       test     = "StringEquals"
-      variable = "${local.github_oidc_url}:aud"
+      variable = "token.actions.githubusercontent.com:aud"
       values   = [local.oidc_audience]
     }
 
@@ -62,7 +62,7 @@ data "aws_iam_policy_document" "assume" {
     # (이게 없으면 GitHub의 아무 repo나 이 role을 가져갈 수 있다)
     condition {
       test     = "StringLike"
-      variable = "${local.github_oidc_url}:sub"
+      variable = "token.actions.githubusercontent.com:sub"
       values   = local.allowed_subs
     }
   }
