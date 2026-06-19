@@ -30,3 +30,9 @@ variable "eks_cluster_admin_principals" {
     "arn:aws:iam::495599735720:user/team1-kwy",
   ]
 }
+
+variable "db_name" {
+  type        = string
+  description = "MySQL 데이터베이스 이름"
+  default     = "chatguard"
+}

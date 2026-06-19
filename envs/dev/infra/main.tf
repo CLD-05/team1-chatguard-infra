@@ -59,17 +59,23 @@ module "elasticache" {
 }
 
 # AWS Secrets Manager 내용물 자동 주입 설정
+data "aws_secretsmanager_secret_version" "rds_generated_secret" {
+  secret_id = module.database.rds_master_user_secret_arn
+}
+
 resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
-  secret_id = aws_secretsmanager_secret.db_secret.id
+  secret_id = aws_secretsmanager_secret.chatguard_secrets.id
 
-  secret_string = jsonencode({
-    DB_USERNAME = module.database.db_username
-    DB_PASSWORD = module.database.db_password
-    DB_URL      = "jdbc:mysql://${module.database.db_endpoint}/chatguard?useSSL=false&allowPublicKeyRetrieval=true"
-
-    REDIS_HOST = module.elasticache.redis_endpoint
-    REDIS_PORT = module.elasticache.redis_port
-  })
+  secret_string = jsonencode(
+    merge(
+      jsondecode(data.aws_secretsmanager_secret_version.rds_generated_secret.secret_string),
+      {
+        REDIS_HOST = module.elasticache.redis_endpoint
+        REDIS_PORT = module.elasticache.redis_port
+        DB_URL     = "jdbc:mysql://${module.database.db_endpoint}/${var.db_name}?useSSL=false&allowPublicKeyRetrieval=true"
+      }
+    )
+  )
 }
 
 # 도커 컴포넌트 저장 기지 (ECR) 조립
