@@ -1,7 +1,10 @@
 # envs/dev/platform-addons/main.tf
 
 data "aws_caller_identity" "current" {}
-data "aws_eks_cluster" "this" { name = "team1-dev-cluster" }
+
+data "aws_eks_cluster" "this" {
+  name = "team1-${var.env}-cluster"
+}
 
 # ==============================================================================
 # 🔐 AWS Secrets Manager에서 실시간으로 비밀번호 금고 낚아채기
@@ -38,11 +41,6 @@ resource "helm_release" "argocd" {
       }
     })
   ]
-}
-
-# AWS에서 기존 EKS 클러스터 정보를 읽어오는 센서 선언
-data "aws_eks_cluster" "this" {
-  name = "team1-${var.env}-cluster"
 }
 
 # =========================================================================

@@ -1,6 +1,7 @@
 resource "aws_secretsmanager_secret" "redis_secret" {
-  name                    = "${local.name_prefix}-redis-secrets"
-  recovery_window_in_days = 0 # 테스트 및 유연한 재빌드를 위해 0으로 설정
+  name                    = "team1-prod-redis-secrets"
+  description             = "ChatGuard prod 환경 Redis 연결 정보 금고"
+  recovery_window_in_days = 7
 }
 
 # =========================================================================
@@ -28,7 +29,7 @@ resource "aws_iam_role" "eks_admin_role" {
 # 역할에 실제 관리자 권한 매핑
 resource "aws_iam_role_policy_attachment" "eks_admin_policy" {
   role       = aws_iam_role.eks_admin_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 data "aws_caller_identity" "current" {}

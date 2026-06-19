@@ -25,15 +25,16 @@ resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
 }
 
 # =========================================================================
-# Grafana 금고 내부에 들어갈 독립 시크릿 채우기
+# 3. Grafana 관리자용 독립 금고 선언 
 # =========================================================================
-resource "aws_secretsmanager_secret_version" "grafana_secret_val" {
-  secret_id = aws_secretsmanager_secret.grafana_secret.id
+resource "aws_secretsmanager_secret" "grafana_secret" {
+  name                    = "${local.name_prefix}-grafana-credentials"
+  description             = "ChatGuard dev 환경 Grafana 대시보드 어드민 자격 증명 금고"
+  recovery_window_in_days = 0 # dev 비용 방어
 
-  secret_string = jsonencode({
-    username = "admin"
-    password = ""
-  })
+  tags = {
+    Name = "${local.name_prefix}-grafana-credentials"
+  }
 }
 
 # =========================================================================
