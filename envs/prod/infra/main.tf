@@ -41,8 +41,8 @@ module "database" {
   instance_class = var.rds_instance_class
 
   # 운영계 전용 삭제 방지 및 고가용성 파라미터 명시적 강제 주입
-  deletion_protection     = false # 👈 최종에 true로 변경!
-  skip_final_snapshot     = true  # 👈 최종에 false로 변경!
+  deletion_protection     = true
+  skip_final_snapshot     = false
   backup_retention_period = 7
   multi_az                = true
 }
@@ -63,16 +63,11 @@ module "elasticache" {
 
 # 운영계 AWS Secrets Manager 내용물 자동 주입 설정
 resource "aws_secretsmanager_secret_version" "chatguard_prod_secret_content" {
-  secret_id = aws_secretsmanager_secret.chatguard_secrets.id
-  secret_string = jsonencode(
-    merge(
-      jsondecode(data.aws_secretsmanager_secret_version.rds_generated_secret.secret_string),
-      {
-        REDIS_HOST = module.elasticache.redis_endpoint
-        REDIS_PORT = module.elasticache.redis_port
-      }
-    )
-  )
+  secret_id = aws_secretsmanager_secret.redis_secret.id
+  secret_string = jsonencode({
+    REDIS_HOST = module.elasticache.redis_endpoint
+    REDIS_PORT = module.elasticache.redis_port
+  })
 }
 
 data "aws_secretsmanager_secret_version" "rds_generated_secret" {
