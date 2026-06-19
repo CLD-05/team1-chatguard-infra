@@ -22,6 +22,39 @@ resource "helm_release" "argocd" {
   ]
 }
 
+# AWS에서 기존 EKS 클러스터 정보를 읽어오는 센서 선언
+data "aws_eks_cluster" "this" {
+  name = "team1-${var.env}-cluster"
+}
+
+# =========================================================================
+# EKS 클러스터 주소를 ArgoCD에 자동 매핑 (platform-addons 소관)
+# =========================================================================
+resource "kubernetes_secret" "argocd_cluster_registration" {
+  metadata {
+    name      = "${var.env}-eks-cluster-secret"
+    namespace = "argocd"
+
+    labels = {
+      "argocd.argoproj.io/secret-type" = "cluster"
+    }
+  }
+
+  type = "Opaque"
+
+  data = {
+    server = data.aws_eks_cluster.this.endpoint
+    name   = data.aws_eks_cluster.this.name
+
+    config = jsonencode({
+      tlsClientConfig = {
+        insecure = false
+        caData   = data.aws_eks_cluster.this.certificate_authority[0].data
+      }
+    })
+  }
+}
+
 # ------------------------------------------------------------------------------
 # 📊 2. Prometheus & Grafana 모니터링 스택 주입 
 # ------------------------------------------------------------------------------

@@ -58,6 +58,20 @@ module "elasticache" {
   node_type = "cache.t4g.micro"
 }
 
+# AWS Secrets Manager 내용물 자동 주입 설정
+resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
+  secret_id = aws_secretsmanager_secret.db_secret.id
+
+  secret_string = jsonencode({
+    DB_USERNAME = module.database.db_username
+    DB_PASSWORD = module.database.db_password
+    DB_URL      = "jdbc:mysql://${module.database.db_endpoint}/chatguard?useSSL=false&allowPublicKeyRetrieval=true"
+
+    REDIS_HOST = module.elasticache.redis_endpoint
+    REDIS_PORT = module.elasticache.redis_port
+  })
+}
+
 # 도커 컴포넌트 저장 기지 (ECR) 조립
 module "ecr" {
   source = "../../../modules/ecr"

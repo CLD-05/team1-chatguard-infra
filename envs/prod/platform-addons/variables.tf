@@ -21,3 +21,9 @@ variable "redis_exporter_chart_version" {
   type        = string
   description = "Prometheus Redis Exporter Helm 차트 버전"
 }
+
+variable "env" {
+  type        = string
+  description = "환경 구분 (dev 또는 prod)"
+  default     = element(split("/", replace(path.cwd, "\\", "/")), length(split("/", replace(path.cwd, "\\", "/"))) - 2)
+}
