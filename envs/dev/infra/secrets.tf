@@ -1,11 +1,5 @@
-resource "random_password" "grafana_password" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
 # =========================================================================
-# 1. AWS Secrets Manager 금고(Secret) 본체 선언
+# AWS Secrets Manager 금고(Secret) 본체 선언
 # =========================================================================
 resource "aws_secretsmanager_secret" "db_secret" {
   name                    = "${local.name_prefix}-database-credentials"
@@ -18,22 +12,20 @@ resource "aws_secretsmanager_secret" "db_secret" {
 }
 
 # =========================================================================
-# 2. 금고 내부에 들어갈 초민감 데이터 채우기 (Secret Version)
+# 개발계(dev) 단일 시크릿 버전 관리 (충돌 방지 및 비밀번호 State 노출 차단)
 # =========================================================================
-# 기존 database 모듈에서 생성한 random_password와 마스터 계정 정보를 JSON으로 묶어 금고에 인입합니다.
-resource "aws_secretsmanager_secret_version" "db_secret_val" {
+resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
   secret_id = aws_secretsmanager_secret.db_secret.id
+
   secret_string = jsonencode({
-    engine   = "mysql"
-    host     = module.database.db_endpoint # database 모듈의 출력값 참조
-    port     = 3306
-    username = "admin"
-    password = module.database.db_password # database 모듈의 평문 패스워드 추출값
+    REDIS_HOST = module.elasticache.redis_endpoint
+    REDIS_PORT = module.elasticache.redis_port
+    DB_URL     = "jdbc:mysql://${module.database.db_endpoint}/${var.db_name}?useSSL=false&allowPublicKeyRetrieval=true"
   })
 }
 
 # =========================================================================
-# 3. Grafana 관리자용 독립 금고 선언
+# 3. Grafana 관리자용 독립 금고 선언 
 # =========================================================================
 resource "aws_secretsmanager_secret" "grafana_secret" {
   name                    = "${local.name_prefix}-grafana-credentials"
@@ -46,12 +38,36 @@ resource "aws_secretsmanager_secret" "grafana_secret" {
 }
 
 # =========================================================================
-# 4. Grafana 금고 내부에 들어갈 독립 시크릿 채우기
+# ArgoCD EKS 조작을 위한 관리자 IAM 역할 생성
 # =========================================================================
-resource "aws_secretsmanager_secret_version" "grafana_secret_val" {
-  secret_id = aws_secretsmanager_secret.grafana_secret.id
-  secret_string = jsonencode({
-    username = "admin"
-    password = random_password.grafana_password.result
+resource "aws_iam_role" "eks_admin_role" {
+  name                 = "team1-${var.env}-eks-admin-role"
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      },
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        # 향후 ArgoCD 전용 IRSA(OIDC)가 완벽히 구성되면 이 부분을 OIDC Provider ARN으로 교체하기 전까지 최소한의 통로만 열어둔다
+      }
+    ]
   })
+}
+
+# 역할에 실제 관리자 권한 매핑
+resource "aws_iam_role_policy_attachment" "eks_admin_policy" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }

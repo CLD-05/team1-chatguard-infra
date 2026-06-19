@@ -1,8 +1,6 @@
 # envs/prod/platform-addons/variables.tf
 
 variable "team" { type = string }
-variable "env" { type = string }
-
 variable "argocd_chart_version" { type = string }
 variable "prometheus_stack_version" { type = string }
 variable "keda_chart_version" { type = string }
@@ -20,4 +18,10 @@ variable "aws_lbc_chart_version" {
 variable "redis_exporter_chart_version" {
   type        = string
   description = "Prometheus Redis Exporter Helm 차트 버전"
+}
+
+variable "env" {
+  type        = string
+  description = "환경 구분 (dev 또는 prod)"
+  default     = "prod"
 }

@@ -1,5 +1,7 @@
 # envs/dev/infra/main.tf
 
+data "aws_caller_identity" "current" {}
+
 locals {
   name_prefix = "team1-dev"
 }
@@ -78,4 +80,23 @@ module "s3" {
 module "route53" {
   source      = "../../../modules/route53"
   domain_name = "chatguard.store" # 👈 팀의 실제 도메인 주소(또는 임시 주소)로 세팅
+}
+
+# =========================================================================
+# ArgoCD용 IAM 역할을 EKS 최고 권한(cluster-admin)과 RBAC 매핑
+# =========================================================================
+resource "aws_eks_access_entry" "argocd_admin_mapping" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/team1-dev-eks-admin-role"
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "argocd_admin_rbac" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.argocd_admin_mapping.principal_arn
+
+  access_scope {
+    type = "cluster"
+  }
 }

@@ -3,6 +3,11 @@ output "db_endpoint" {
   value       = aws_db_instance.this.endpoint
 }
 
+output "rds_master_user_secret_arn" {
+  description = "AWS RDS가 자체 생성하여 관리하는 마스터 비밀번호 시크릿의 ARN"
+  value       = try(aws_db_instance.this.master_user_secret[0].secret_arn, null)
+}
+
 output "db_username" {
   description = "데이터베이스 마스터 유저네임"
   value       = aws_db_instance.this.username

@@ -1,5 +1,11 @@
 # envs/dev/platform-addons/main.tf
 
+data "aws_caller_identity" "current" {}
+
+data "aws_eks_cluster" "this" {
+  name = "team1-${var.env}-cluster"
+}
+
 # ==============================================================================
 # 🔐 AWS Secrets Manager에서 실시간으로 비밀번호 금고 낚아채기
 # ==============================================================================
@@ -35,6 +41,38 @@ resource "helm_release" "argocd" {
       }
     })
   ]
+}
+
+# =========================================================================
+# EKS 클러스터 주소 및 인증서를 ArgoCD에 자동 매핑 
+# =========================================================================
+resource "kubernetes_secret" "argocd_cluster_registration" {
+  metadata {
+    name      = "${var.env}-eks-cluster-secret"
+    namespace = "argocd"
+
+    labels = {
+      "argocd.argoproj.io/secret-type" = "cluster"
+    }
+  }
+
+  type = "Opaque"
+
+  data = {
+    server = data.aws_eks_cluster.this.endpoint
+    name   = data.aws_eks_cluster.this.name
+
+    config = jsonencode({
+      tlsClientConfig = {
+        insecure = false
+        caData   = data.aws_eks_cluster.this.certificate_authority[0].data
+      }
+      awsAuthConfig = {
+        clusterName = data.aws_eks_cluster.this.name
+        roleARN     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/team1-${var.env}-eks-admin-role"
+      }
+    })
+  }
 }
 
 # ------------------------------------------------------------------------------

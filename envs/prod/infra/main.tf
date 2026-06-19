@@ -1,5 +1,7 @@
 # envs/prod/infra/main.tf
 
+data "aws_caller_identity" "current" {}
+
 locals {
   name_prefix = "${var.team}-${var.env}"
 }
@@ -41,8 +43,8 @@ module "database" {
   instance_class = var.rds_instance_class
 
   # 운영계 전용 삭제 방지 및 고가용성 파라미터 명시적 강제 주입
-  deletion_protection     = false # 👈 최종에 true로 변경!
-  skip_final_snapshot     = true  # 👈 최종에 false로 변경!
+  deletion_protection     = true
+  skip_final_snapshot     = false
   backup_retention_period = 7
   multi_az                = true
 }
@@ -60,6 +62,17 @@ module "elasticache" {
 
   node_type = var.redis_node_type
 }
+
+# 운영계 AWS Secrets Manager 내용물 자동 주입 설정
+resource "aws_secretsmanager_secret_version" "chatguard_prod_secret_content" {
+  secret_id = aws_secretsmanager_secret.redis_secret.id
+
+  secret_string = jsonencode({
+    REDIS_HOST = module.elasticache.redis_endpoint
+    REDIS_PORT = module.elasticache.redis_port
+  })
+}
+
 
 module "ecr" {
   source = "../../../modules/ecr"
@@ -82,4 +95,23 @@ module "s3_frontend" {
 module "route53" {
   source      = "../../../modules/route53"
   domain_name = var.domain_name
+}
+
+# =========================================================================
+# 운영계 ArgoCD용 IAM 역할 EKS RBAC 매핑
+# =========================================================================
+resource "aws_eks_access_entry" "argocd_admin_mapping" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/team1-prod-eks-admin-role"
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "argocd_admin_rbac" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.argocd_admin_mapping.principal_arn
+
+  access_scope {
+    type = "cluster"
+  }
 }

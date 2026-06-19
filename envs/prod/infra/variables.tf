@@ -49,3 +49,9 @@ variable "eks_public_access_cidrs" {
   description = "EKS 클러스터 Endpoint에 접근을 허용할 승인된 공인 IP 대역 리스트"
   nullable    = false
 }
+
+variable "db_name" {
+  type        = string
+  description = "MySQL 데이터베이스 이름"
+  default     = "chatguard"
+}
