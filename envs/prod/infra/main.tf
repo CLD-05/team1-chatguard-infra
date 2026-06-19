@@ -1,5 +1,7 @@
 # envs/prod/infra/main.tf
 
+data "aws_caller_identity" "current" {}
+
 locals {
   name_prefix = "${var.team}-${var.env}"
 }
@@ -93,4 +95,23 @@ module "s3_frontend" {
 module "route53" {
   source      = "../../../modules/route53"
   domain_name = var.domain_name
+}
+
+# =========================================================================
+# 운영계 ArgoCD용 IAM 역할 EKS RBAC 매핑
+# =========================================================================
+resource "aws_eks_access_entry" "argocd_admin_mapping" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/team1-prod-eks-admin-role"
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "argocd_admin_rbac" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:aws:eks:aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.argocd_admin_mapping.principal_arn
+
+  access_scope {
+    type = "cluster"
+  }
 }
