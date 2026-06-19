@@ -18,17 +18,15 @@ resource "aws_secretsmanager_secret" "db_secret" {
 }
 
 # =========================================================================
-# 2. 금고 내부에 들어갈 초민감 데이터 채우기 (Secret Version)
+# 개발계(dev) 단일 시크릿 버전 관리 (충돌 방지 및 비밀번호 State 노출 차단)
 # =========================================================================
-# 기존 database 모듈에서 생성한 random_password와 마스터 계정 정보를 JSON으로 묶어 금고에 인입합니다.
-resource "aws_secretsmanager_secret_version" "db_secret_val" {
+resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
   secret_id = aws_secretsmanager_secret.db_secret.id
+
   secret_string = jsonencode({
-    engine   = "mysql"
-    host     = module.database.db_endpoint # database 모듈의 출력값 참조
-    port     = 3306
-    username = "admin"
-    password = module.database.db_password # database 모듈의 평문 패스워드 추출값
+    REDIS_HOST = module.elasticache.redis_endpoint
+    REDIS_PORT = module.elasticache.redis_port
+    DB_URL     = "jdbc:mysql://${module.database.db_endpoint}/${var.db_name}?useSSL=false&allowPublicKeyRetrieval=true"
   })
 }
 
