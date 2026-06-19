@@ -25,19 +25,6 @@ resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
 }
 
 # =========================================================================
-# Grafana 관리자용 독립 금고 선언
-# =========================================================================
-resource "aws_secretsmanager_secret" "grafana_secret" {
-  name                    = "${local.name_prefix}-grafana-credentials"
-  description             = "ChatGuard dev 환경 Grafana 대시보드 어드민 자격 증명 금고"
-  recovery_window_in_days = 0 # dev 비용 방어
-
-  tags = {
-    Name = "${local.name_prefix}-grafana-credentials"
-  }
-}
-
-# =========================================================================
 # Grafana 금고 내부에 들어갈 독립 시크릿 채우기
 # =========================================================================
 resource "aws_secretsmanager_secret_version" "grafana_secret_val" {
@@ -74,7 +61,7 @@ resource "aws_iam_role" "eks_admin_role" {
 # 역할에 실제 관리자 권한 매핑
 resource "aws_iam_role_policy_attachment" "eks_admin_policy" {
   role       = aws_iam_role.eks_admin_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 data "aws_caller_identity" "current" {}

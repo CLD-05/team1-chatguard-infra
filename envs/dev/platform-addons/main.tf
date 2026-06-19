@@ -1,5 +1,8 @@
 # envs/dev/platform-addons/main.tf
 
+data "aws_caller_identity" "current" {}
+data "aws_eks_cluster" "this" { name = "team1-dev-cluster" }
+
 # ==============================================================================
 # 🔐 AWS Secrets Manager에서 실시간으로 비밀번호 금고 낚아채기
 # ==============================================================================

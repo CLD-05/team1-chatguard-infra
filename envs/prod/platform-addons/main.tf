@@ -1,5 +1,8 @@
 # envs/prod/platform-addons/main.tf
 
+data "aws_caller_identity" "current" {}
+data "aws_eks_cluster" "this" { name = "team1-prod-cluster" }
+
 # ------------------------------------------------------------------------------
 # 🚀 1. ArgoCD GitOps 엔진 주입 (보안 하드닝 및 버전 변수화)
 # ------------------------------------------------------------------------------
