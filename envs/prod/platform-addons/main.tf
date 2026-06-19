@@ -53,8 +53,7 @@ resource "kubernetes_secret" "argocd_cluster_registration" {
       }
       awsAuthConfig = {
         clusterName = data.aws_eks_cluster.this.name
-        # 필요시 테라폼 배포에 사용되는 마스터/어드민 Role ARN을 지정하거나 생략 가능
-        # roleARN    = var.argocd_target_role_arn 
+        roleARN     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/team1-${var.env}-eks-admin-role"
       }
     })
   }

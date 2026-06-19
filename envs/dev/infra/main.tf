@@ -59,10 +59,6 @@ module "elasticache" {
 }
 
 # AWS Secrets Manager 내용물 자동 주입 설정
-data "aws_secretsmanager_secret_version" "rds_generated_secret" {
-  secret_id = module.database.rds_master_user_secret_arn
-}
-
 resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
   secret_id = aws_secretsmanager_secret.db_secret.id
 
@@ -70,6 +66,15 @@ resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
     REDIS_HOST = module.elasticache.redis_endpoint
     REDIS_PORT = module.elasticache.redis_port
     DB_URL     = "jdbc:mysql://${module.database.db_endpoint}/${var.db_name}?useSSL=false&allowPublicKeyRetrieval=true"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "grafana_secret_val" {
+  secret_id = aws_secretsmanager_secret.grafana_secret.id
+
+  secret_string = jsonencode({
+    username = "admin"
+    password = ""
   })
 }
 
