@@ -1,11 +1,5 @@
-resource "random_password" "grafana_password" {
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
 # =========================================================================
-# 1. AWS Secrets Manager 금고(Secret) 본체 선언
+# AWS Secrets Manager 금고(Secret) 본체 선언
 # =========================================================================
 resource "aws_secretsmanager_secret" "db_secret" {
   name                    = "${local.name_prefix}-database-credentials"
@@ -31,7 +25,7 @@ resource "aws_secretsmanager_secret_version" "chatguard_secret_content" {
 }
 
 # =========================================================================
-# 3. Grafana 관리자용 독립 금고 선언
+# Grafana 관리자용 독립 금고 선언
 # =========================================================================
 resource "aws_secretsmanager_secret" "grafana_secret" {
   name                    = "${local.name_prefix}-grafana-credentials"
@@ -44,12 +38,43 @@ resource "aws_secretsmanager_secret" "grafana_secret" {
 }
 
 # =========================================================================
-# 4. Grafana 금고 내부에 들어갈 독립 시크릿 채우기
+# Grafana 금고 내부에 들어갈 독립 시크릿 채우기
 # =========================================================================
 resource "aws_secretsmanager_secret_version" "grafana_secret_val" {
   secret_id = aws_secretsmanager_secret.grafana_secret.id
+
   secret_string = jsonencode({
     username = "admin"
-    password = random_password.grafana_password.result
+    password = ""
   })
 }
+
+# =========================================================================
+# ArgoCD EKS 조작을 위한 관리자 IAM 역할 생성
+# =========================================================================
+resource "aws_iam_role" "eks_admin_role" {
+  name = "team1-${var.env}-eks-admin-role"
+
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+      }
+    ]
+  })
+}
+
+# 역할에 실제 관리자 권한 매핑
+resource "aws_iam_role_policy_attachment" "eks_admin_policy" {
+  role       = aws_iam_role.eks_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+data "aws_caller_identity" "current" {}
