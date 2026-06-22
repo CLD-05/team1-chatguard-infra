@@ -112,6 +112,12 @@ module "external_secrets_irsa_role" {
   role_name                      = "team1-${var.env}-eso-role"
   attach_external_secrets_policy = true
 
+  role_permissions_boundary_arn = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+
+  tags = {
+    Name = "team1-${var.env}-eso-role"
+  }
+
   oidc_providers = {
     ex = {
       provider_arn               = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")}"
