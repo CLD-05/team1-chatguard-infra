@@ -73,6 +73,9 @@ resource "kubernetes_secret" "argocd_cluster_registration" {
       }
     })
   }
+  depends_on = [
+    helm_release.argocd
+  ]
 }
 
 # ------------------------------------------------------------------------------
