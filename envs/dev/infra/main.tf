@@ -62,7 +62,9 @@ module "elasticache" {
 
 # 도커 컴포넌트 저장 기지 (ECR) 조립
 module "ecr" {
-  source = "../../../modules/ecr"
+  source       = "../../../modules/ecr"
+  force_delete = true
+
   repository_names = [
     "${local.name_prefix}-api-server", # 백엔드 Spring API 서버용 저장소
     "${local.name_prefix}-ai-worker",  # AI 모더레이션 Python 워커용 저장소

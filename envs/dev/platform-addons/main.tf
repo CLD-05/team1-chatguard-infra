@@ -101,3 +101,96 @@ resource "helm_release" "prometheus_stack" {
     })
   ]
 }
+
+# ==============================================================================
+# 3. External Secrets Operator (ESO) 전용 AWS IAM 역할 (IRSA) 생성
+# ==============================================================================
+module "external_secrets_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.39.0"
+
+  role_name                      = "team1-${var.env}-eso-role"
+  attach_external_secrets_policy = true
+
+  role_permissions_boundary_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/TeamRuntimeBoundary"
+
+  tags = {
+    Name = "team1-${var.env}-eso-role"
+  }
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")}"
+      namespace_service_accounts = ["external-secrets:external-secrets"]
+    }
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 4. External Secrets Operator (ESO) 로봇 주입 (Helm values 설정 포함)
+# ------------------------------------------------------------------------------
+resource "helm_release" "external_secrets" {
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = "0.9.11"
+  namespace        = "external-secrets"
+  create_namespace = true
+
+  values = [
+    yamlencode({
+      installCRDs = true
+
+      serviceAccount = {
+        create = true
+        name   = "external-secrets"
+        annotations = {
+          "eks.amazonaws.com/role-arn" = module.external_secrets_irsa_role.iam_role_arn
+        }
+      }
+    })
+  ]
+}
+
+# ==============================================================================
+# 📈 5. Prometheus Adapter 주입 (Custom Metrics API 엔드포인트 활성화)
+# ==============================================================================
+resource "helm_release" "prometheus_adapter" {
+  name             = "prometheus-adapter"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "prometheus-adapter"
+  version          = "4.11.0"
+  namespace        = "monitoring"
+  create_namespace = false
+
+  values = [
+    yamlencode({
+      prometheus = {
+        url  = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local"
+        port = 9090
+      }
+
+      rules = {
+        default = false
+
+        custom = [
+          {
+            seriesQuery = "ws_active_connections{namespace!=\"\",pod!=\"\"}"
+            resources = {
+              template = "<<.Resource>>"
+            }
+            name = {
+              matches = "^(.*)$"
+              as      = "ws_active_connections_per_pod" # HPA 서류에서 불러올 최종 이름
+            }
+            metricsQuery = "sum(ws_active_connections{<<.LabelMatchers>>}) by (<<.GroupBy>>)"
+          }
+        ]
+      }
+    })
+  ]
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
