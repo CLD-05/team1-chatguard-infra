@@ -4,7 +4,7 @@
 resource "aws_ecr_repository" "this" {
   for_each             = toset(var.repository_names)
   name                 = each.value
-  image_tag_mutability = "MUTABLE" # dev 환경이므로 같은 태그(latest 등)로 덮어쓰기 허용
+  image_tag_mutability = "MUTABLE"
   force_delete         = var.force_delete
 
   # 🔒 보안 하드닝: 이미지 푸시 시 자동으로 보안 취약점 스캔 실행

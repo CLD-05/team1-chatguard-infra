@@ -4,6 +4,7 @@ variable "repository_names" {
 }
 
 variable "force_delete" {
-  type    = bool
-  default = false
+  description = "이미지가 남아 있어도 강제 삭제 허용 여부. prod는 false, dev destroy 시 true."
+  type        = bool
+  default     = false
 }
