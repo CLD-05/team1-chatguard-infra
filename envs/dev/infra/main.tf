@@ -80,6 +80,26 @@ module "s3" {
   bucket_name = "${local.name_prefix}-chatguard-assets"
 }
 
+# 금칙어 시딩 및 데이터 마이그레이션 전용 완전 격리형 Private S3 버킷
+resource "aws_s3_bucket" "banned_words_bucket" {
+  bucket        = "${local.name_prefix}-chatguard-migration"
+  force_destroy = true # 개발(dev) 환경의 빠른 피드백 및 파일 테스트 삭제를 위한 설정
+
+  tags = {
+    Name        = "${local.name_prefix}-chatguard-migration"
+    Environment = "dev"
+    Component   = "backend"
+  }
+}
+
+# 금칙어 파일 이력 추적을 위한 버전 관리 활성화 (실무 권장)
+resource "aws_s3_bucket_versioning" "banned_words_versioning" {
+  bucket = aws_s3_bucket.banned_words_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # 대외 서비스 창구 도메인(Route53) 호스팅 존 조립
 module "route53" {
   source      = "../../../modules/route53"
