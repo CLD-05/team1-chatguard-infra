@@ -12,6 +12,8 @@ module "network" {
   vpc_cidr    = var.vpc_cidr
   vpc_name    = "${local.name_prefix}-vpc"
   environment = var.env
+
+  public_subnet_extra_tags = { "kubernetes.io/role/elb" = "1" } # ALB(인터넷)용 서브넷 디스커버리 태그 — LBC가 public 서브넷 식별. D47
 }
 
 # 쿠버네티스 컴퓨팅 기지 구축

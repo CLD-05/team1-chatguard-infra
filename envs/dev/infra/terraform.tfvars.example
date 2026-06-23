@@ -1,0 +1,8 @@
+# envs/dev/infra/terraform.tfvars.example
+# 사용법: 이 파일을 terraform.tfvars로 복사 후 plan/apply.
+# (terraform.tfvars 실물은 .gitignore 대상 — 커밋 금지. 여기엔 평문 네트워크 값만, 시크릿 금지.)
+# 기본값이 없어 입력이 강제되는 변수만 명시(team·env·vpc_cidr).
+
+team     = "team1"
+env      = "dev"
+vpc_cidr = "10.1.0.0/17" # dev 전용. ⚠️ prod는 10.1.128.0/17 — 절대 혼동 금지.

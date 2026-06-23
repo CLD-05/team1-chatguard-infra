@@ -103,57 +103,13 @@ resource "helm_release" "prometheus_stack" {
 }
 
 # ==============================================================================
-# 3. External Secrets Operator (ESO) 전용 AWS IAM 역할 (IRSA) 생성
+# 3. External Secrets Operator (ESO) — IRSA role · Helm 설치는 platform-addons/addons.tf로 이관(화해 B).
+#    OIDC provider를 하드코딩 문자열이 아니라 infra의 aws_iam_openid_connect_provider.eks 리소스 참조
+#    (remote_state output)로 연결하고, Secrets Manager 정책을 team1-${env}-* 로 최소권한화하기 위함.
 # ==============================================================================
-module "external_secrets_irsa_role" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "5.39.0"
-
-  role_name                      = "team1-${var.env}-eso-role"
-  attach_external_secrets_policy = true
-
-  role_permissions_boundary_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/TeamRuntimeBoundary"
-
-  tags = {
-    Name = "team1-${var.env}-eso-role"
-  }
-
-  oidc_providers = {
-    ex = {
-      provider_arn               = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")}"
-      namespace_service_accounts = ["external-secrets:external-secrets"]
-    }
-  }
-}
-
-# ------------------------------------------------------------------------------
-# 4. External Secrets Operator (ESO) 로봇 주입 (Helm values 설정 포함)
-# ------------------------------------------------------------------------------
-resource "helm_release" "external_secrets" {
-  name             = "external-secrets"
-  repository       = "https://charts.external-secrets.io"
-  chart            = "external-secrets"
-  version          = "0.9.11"
-  namespace        = "external-secrets"
-  create_namespace = true
-
-  values = [
-    yamlencode({
-      installCRDs = true
-
-      serviceAccount = {
-        create = true
-        name   = "external-secrets"
-        annotations = {
-          "eks.amazonaws.com/role-arn" = module.external_secrets_irsa_role.iam_role_arn
-        }
-      }
-    })
-  ]
-}
 
 # ==============================================================================
-# 📈 5. Prometheus Adapter 주입 (Custom Metrics API 엔드포인트 활성화)
+# 📈 4. Prometheus Adapter 주입 (Custom Metrics API 엔드포인트 활성화)
 # ==============================================================================
 resource "helm_release" "prometheus_adapter" {
   name             = "prometheus-adapter"
