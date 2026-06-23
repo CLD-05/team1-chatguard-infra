@@ -21,7 +21,10 @@ resource "aws_subnet" "public_a" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, 0) # 10.1.0.0/21
   availability_zone       = "ap-northeast-2a"
   map_public_ip_on_launch = true
-  tags                    = { Name = "${var.vpc_name}-public-2a" }
+  tags = {
+    Name                     = "${var.vpc_name}-public-2a"
+    "kubernetes.io/role/elb" = "1" # internet-facing ALB 서브넷 자동 탐색(LBC, D47)
+  }
 }
 
 resource "aws_subnet" "public_c" {
@@ -29,7 +32,10 @@ resource "aws_subnet" "public_c" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, 1) # 10.1.8.0/21
   availability_zone       = "ap-northeast-2c"
   map_public_ip_on_launch = true
-  tags                    = { Name = "${var.vpc_name}-public-2c" }
+  tags = {
+    Name                     = "${var.vpc_name}-public-2c"
+    "kubernetes.io/role/elb" = "1" # internet-facing ALB 서브넷 자동 탐색(LBC, D47)
+  }
 }
 
 # Private 서브넷 (EKS 워커 노드 가동용)
