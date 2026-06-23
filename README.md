@@ -52,6 +52,7 @@ kubectl get nodes                               # 전부 Ready 확인
 
 # ③ ⭐ Grafana 시크릿 값 주입 — infra는 '빈 금고'만 만든다(§5: 진짜 비번은 사람이 주입).
 #    이 단계를 빠뜨리면 ④ platform-addons plan이 '시크릿 버전 부재'로 깨진다.
+#    dev는 destroy 시 금고가 소멸(recovery_window=0)하므로 매 apply 사이클마다 재실행(→ Known Issues 수동①).
 aws secretsmanager put-secret-value \
   --secret-id team1-dev-grafana-credentials \
   --secret-string '{"password":"<DEV_GRAFANA_PW>"}' \
@@ -74,19 +75,23 @@ kubectl get pods -n monitoring         # kube-prometheus-stack(+prometheus-adapt
 kubectl get pods -n keda               # KEDA operator
 kubectl get pods -n external-secrets   # ESO
 kubectl get pods -n kube-system | grep aws-load-balancer-controller
-kubectl get ingressclass               # 'alb' 보이면 LBC 준비 OK = D47(ALB 직결) 토대
+kubectl get ingressclass               # 'alb'=LBC 준비 완료(토대, D47). 실제 ALB·외부 URL은 config가 Ingress를 배포해야 생성됨
+#   → 이 단계(Phase 0)에선 `kubectl get ingress -A`가 비어있는 게 정상
 kubectl get servicemonitor -A          # redis-exporter 등 스크레이프 대상
 ```
 
 ## Destroy (dev — apply 역순 · ⚠️ 사람 확인 필수)
 
+> ⚠️ **이 destroy 순서는 소유 경계(CLAUDE.md §4)로 도출했으나 아직 미실행 검증이다** — 오늘(2026-06-23)은 apply만 검증됐고 destroy는 실행하지 않았다. 위 Apply 섹션의 "검증됨"과 구분할 것. **첫 destroy 시 단계별로 확인하며 진행**한다.
+>
 > **순서가 핵심.** ALB는 Terraform이 아니라 **LBC(파드)가 Ingress를 보고** 만든다(CLAUDE.md §4). LBC를 먼저 지우면 ALB가 **고아**로 남아 공유 계정·다른 팀에 피해(§1). → 클러스터 워크로드부터 회수하고, 컨트롤러는 나중에.
 
 ```bash
-# ⓪ (config/app이 배포돼 있으면) AWS LB를 만드는 GitOps 소유물부터 제거
-kubectl delete ingress --all -A                                    # ALB 회수 (필수)
-kubectl delete svc -A --field-selector spec.type=LoadBalancer      # 잔여 ELB 회수(ArgoCD 등)
+# ⓪ (config/app이 ArgoCD로 배포된 경우에만) Ingress부터 제거 — ALB 고아 방지(CLAUDE.md §4)
+#    Phase 0만 올린 상태(앱 미배포)면 Ingress가 없으니 이 단계는 건너뛴다.
+kubectl delete ingress --all -A                  # ALB 회수 (배포된 경우 필수)
 #   ArgoCD Application으로 배포했다면 해당 app을 먼저 제거(재싱크로 되살아남 방지)
+#   (LB 타입 Service(예: ArgoCD)는 platform-addons terraform destroy가 정리하므로 별도 삭제 불필요)
 
 # ① platform-addons destroy (클러스터가 살아있는 동안 — provider가 클러스터에 접속)
 cd envs/dev/platform-addons
