@@ -10,6 +10,15 @@ ChatGuard의 **Terraform IaC 전용** 레포 (`modules/` + `envs/dev`·`envs/pro
 
 ## 구조
 
+### 🔐 시크릿 자산 분류 및 소유권 체계 (CLAUDE.md §4 준수)
+
+| 자산 분류 | 공급처 (Source) | 포함 항목 (Examples) | 비고 |
+| :--- | :--- | :--- | :--- |
+| **안정성 고정값** | **ConfigMap (`base/configmap.yaml`)** | `REDIS_PORT: "6379"`, `MOD_QUEUE_KEY: "mod:queue"`, `ROOM_CHANNEL_PREFIX: "room:"`, `MODEL_VERSION: "unsmile-weighted-v1"` | Git에 기록하고 투명하게 공유하기 적합한 비민감성 규격 정보 (PR #38 정렬 완료) |
+| **변동성 및 보안 자산** | **Secrets Manager (수동/IaC)**<br>`team1-dev-database-credentials` | `JWT_SECRET` | 테라폼에 의해 관리되거나 앱 인증에 필요한 공용 보안 자산 |
+
+---
+
 두 개의 **독립 Terraform 루트**(각자 `.terraform.lock.hcl`·state). apply는 **① infra → ② platform-addons** 순서 — EKS가 떠야 그 위 Helm 설치가 가능하다.
 
 | 루트                       | state key (S3 `tfstate-lionkdt5-team1`)       | 만드는 것                                                                                                                        |
@@ -67,8 +76,8 @@ cd ../platform-addons
 terraform init
 terraform plan  -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars
-#   LBC webhook race로 1회 실패할 수 있음 → 아래로 LBC 파드 Running 확인 후 재apply하면
-#   Terraform이 실패 릴리스를 정리하고 재생성한다(검증됨).
+#    LBC webhook race로 1회 실패할 수 있음 → 아래로 LBC 파드 Running 확인 후 재apply하면
+#    Terraform이 실패 릴리스를 정리하고 재생성한다(검증됨).
 kubectl get pods -n kube-system | grep aws-load-balancer-controller
 ```
 
@@ -92,6 +101,9 @@ kubectl get servicemonitor -A          # redis-exporter 등 스크레이프 대�
 >
 > 🕘 **시작 전 시간 확인**: destroy는 EKS/VPC까지 15~20분 이상 걸린다. **남은 작업 시간이 30분 미만이면 시작하지 말 것** (18:00 차단에 중간에 끊기면 state 꼬임 + orphan).
 
+> ✅ **2026-06-24 실전 destroy 및 야간 차단 락 복구 공정 최종 검증 완료 (완전 검증 완료 상태)**
+> 단, 그 과정에서 야간 차단 중단 + 연쇄 타임아웃 멈춤 사고가 발생할 수 있으므로 아래 순서를 반드시 지키고, 막히면 "Destroy 중 막힘 복구" 및 Known Issues 절차를 따릅니다.
+> 
 ```bash
 # ⓪ 시작 전 — 자격증명·시간 여유 확인
 aws sts get-caller-identity        # team1-xxx 정상 응답 확인 (InvalidAccessKeyId면 차단 시간대)
@@ -112,6 +124,8 @@ aws elbv2 describe-load-balancers \
 # ③ platform-addons destroy (클러스터가 살아있는 동안 — provider가 클러스터에 접속)
 cd envs/dev/platform-addons
 terraform destroy -var-file=terraform.tfvars
+# ⚠️ Known Issues: ArgoCD/Helm 자식 리소스 해제 지연으로 `context deadline exceeded` 타임아웃이 발생할 수 있습니다. 
+# 당황하지 말고 그 자리에서 `terraform destroy`를 1회 더 재시도(Retry)하면 찌꺼기가 완벽하게 청소되며 완료됩니다 (2026-06-24 실증 완료).
 
 # ④ infra destroy (클러스터·VPC·RDS·Redis·ECR·시크릿 금고 제거)
 cd ../infra
@@ -206,3 +220,6 @@ terraform destroy
 | 수동② | platform-addons apply가 LBC webhook race로 1회 실패 가능                                                                                                                           | LBC 파드 Running 확인 후 재apply                                                                 | prometheus_stack 등에 LBC readiness 대기(`depends_on`)                                                                           |
 | 설계  | EKS access entry 409 — **운전자=클러스터 생성자**는 admin 목록에서 제외해야 함(bootstrap 자동 admin과 중복, D35)                                                                   | `variables.tf`의 `eks_cluster_admin_principals`에서 생성자 제외(현재 team1-cjc 제외됨)           | 운전자가 바뀌면 목록 재조정                                                                                                      |
 | 무해  | `prometheus_adapter`가 떠 있으나 스케일은 **KEDA-only**라 미사용                                                                                                                   | —                                                                                                | 후속 PR로 제거 예정                                                                                                              |
+
+| 사고③ | **(2026-06-24 실증)** 테라폼 명령어 또는 변수 명단 주입 시 주소(ARN) 양옆에 백틱(`` ` ``)을 사용하면 `Invalid character` 및 `Index value required` 에러 발생 | 백틱(`` ` ``) 문자를 모두 제거하고, 테라폼 표준 규격인 쌍따옴표(`"`) 문자열로 치환하여 실행 | 향후 복붙 가이드라인 및 코드 리뷰 시 쌍따옴표 검증 강제 |
+| 사고④ | **(2026-06-24 실증)** 18:00 야간 차단 진입 후 `destroy/apply` 수행 시 `DeleteSubnet 403 UnauthorizedOperation` 및 `S3 PutObject AccessDenied` 에러와 함께 `errored.tfstate` 파편 발생 | 즉시 작업을 중단하고 다음 날 09:00 권한 부활 후 `terraform force-unlock <LOCK_ID>` -> `terraform state push errored.tfstate` 순으로 장부 수선 후 재개 | 18:00 임박 시 destroy 절대 착수 금지 수칙 엄수 및 인계서 행동 요령 인입 |
