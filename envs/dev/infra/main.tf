@@ -35,9 +35,7 @@ module "database" {
   db_name             = "${local.name_prefix}-db"
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
-
-  # 모듈이 "dev" 임을 인지할 수 있도록 패스
-  environment = var.env
+  environment         = "dev"
 
   allowed_security_groups = [
     module.eks.cluster_managed_security_group_id,

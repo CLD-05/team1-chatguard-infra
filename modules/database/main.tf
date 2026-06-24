@@ -1,3 +1,7 @@
+variable "environment" {
+  type        = string
+  description = "dev 또는 prod 환경 구분"
+}
 
 # =========================================================================
 # 1. RDS 전용 보안 그룹 (Security Group) 방화벽 설정
