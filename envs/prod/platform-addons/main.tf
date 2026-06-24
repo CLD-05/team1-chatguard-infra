@@ -26,7 +26,7 @@ resource "helm_release" "argocd" {
           # 무동작이다. 추후 LoadBalancer로 노출 전환 시 곧바로 Team 표준 태그가 박혀
           # orphan(2026-06-23 사고)을 예방하도록 미리 둔다.
           annotations = {
-            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=prod,Project=chatguard"
+            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=prod,Project=chatguard,Owner=infra-lead"
           }
         }
       }

@@ -41,7 +41,7 @@ resource "helm_release" "argocd" {
           # 미부착 시 destroy 중단 때 Team 태그 없는 orphan NLB/SG가
           # DenyOtherTeamResources-team1 정책에 막힌다(2026-06-23 사고).
           annotations = {
-            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=dev,Project=chatguard"
+            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=dev,Project=chatguard,Owner=infra-lead"
           }
         }
       }
