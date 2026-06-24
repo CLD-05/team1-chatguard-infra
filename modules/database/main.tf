@@ -1,7 +1,3 @@
-variable "environment" {
-  type        = string
-  description = "dev 또는 prod 환경 구분"
-}
 
 # =========================================================================
 # 1. RDS 전용 보안 그룹 (Security Group) 방화벽 설정
@@ -46,17 +42,7 @@ resource "aws_db_subnet_group" "this" {
 }
 
 # =========================================================================
-# 3. 마스터 비밀번호 임의 생성 (dev 환경일 때만 1개 생성, prod일 때는 0개 생성)
-# =========================================================================
-resource "random_password" "password" {
-  count            = var.environment == "prod" ? 0 : 1 # prod면 안 만들고, dev면 만듦
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-# =========================================================================
-# 4. RDS MySQL 인스턴스 본체 생성
+# 3. RDS MySQL 인스턴스 본체 생성
 # =========================================================================
 resource "aws_db_instance" "this" {
   identifier            = var.db_name
@@ -69,12 +55,8 @@ resource "aws_db_instance" "this" {
   db_name  = "chatguard"
   username = "admin"
 
-  # dev일 때는 테라폼이 만든 난수 결과값을 쓰고, 
-  # prod일 때는 "일단 더미 값"을 넣거나 manage_master_user_password 옵션을 쓰도록 분기
-  password = var.environment == "prod" ? null : random_password.password[0].result
-
-  # prod 환경일 때 AWS가 알아서 암호를 관리하고 State 장부에는 안 남기게 
-  manage_master_user_password = var.environment == "prod" ? true : null
+  manage_master_user_password = true
+  password                    = null
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.db.id]
