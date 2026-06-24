@@ -37,6 +37,12 @@ resource "helm_release" "argocd" {
       server = {
         service = {
           type = "LoadBalancer"
+          # D49 안전망: LBC가 만든 ArgoCD NLB에 표준 태그를 자동 부착한다.
+          # 미부착 시 destroy 중단 때 Team 태그 없는 orphan NLB/SG가
+          # DenyOtherTeamResources-team1 정책에 막힌다(2026-06-23 사고).
+          annotations = {
+            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=dev,Project=chatguard,Owner=infra-lead"
+          }
         }
       }
     })
