@@ -35,7 +35,6 @@ module "database" {
   db_name             = "${local.name_prefix}-db"
   vpc_id              = module.network.vpc_id
   isolated_subnet_ids = module.network.isolated_subnet_ids
-  environment         = "dev"
 
   allowed_security_groups = [
     module.eks.cluster_managed_security_group_id,
