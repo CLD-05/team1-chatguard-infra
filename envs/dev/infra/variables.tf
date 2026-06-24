@@ -23,12 +23,11 @@ variable "eks_cluster_admin_principals" {
   description = "EKS 클러스터 관리자 접근 IAM 유저 ARN 목록(팀원)."
   type        = list(string)
   default = [
-    # team1-cjc(=클러스터 생성자/운전자, CLAUDE.md §5)는 bootstrap_cluster_creator_admin_permissions=true로
-    # 자동 admin → 명시 등록 시 409 중복(D35 보강). 생성자가 바뀌면 이 전제 재검토.
     "arn:aws:iam::495599735720:user/team1-ykh",
     "arn:aws:iam::495599735720:user/team1-ssm",
     "arn:aws:iam::495599735720:user/team1-lhc",
     "arn:aws:iam::495599735720:user/team1-kwy",
+    "arn:aws:iam::495599735720:user/team1-cjc",
   ]
 }
 
