@@ -15,7 +15,7 @@ ChatGuard의 **Terraform IaC 전용** 레포 (`modules/` + `envs/dev`·`envs/pro
 | 자산 분류 | 공급처 (Source) | 포함 항목 (Examples) | 비고 |
 | :--- | :--- | :--- | :--- |
 | **안정성 고정값** | **ConfigMap (`base/configmap.yaml`)** | `REDIS_PORT: "6379"`, `MOD_QUEUE_KEY: "mod:queue"`, `ROOM_CHANNEL_PREFIX: "room:"`, `MODEL_VERSION: "unsmile-weighted-v1"` | Git에 기록하고 투명하게 공유하기 적합한 비민감성 규격 정보 (PR #38 정렬 완료) |
-| **변동성 및 보안 자산** | **Secrets Manager (수동/IaC)**<br>`team1-dev-database-credentials` | `JWT_SECRET` | 테라폼에 의해 관리되거나 앱 인증에 필요한 공용 보안 자산 |
+| **변동성 및 보안 자산** | **Secrets Manager**<br>`team1-dev-database-credentials` | **IaC 자동(`secret_version` 3키)**: `DB_URL`·`REDIS_HOST`·`REDIS_PORT`<br>**사람 주입(3키)**: `DB_USER`·`DB_PASSWORD`·`JWT_SECRET` | config의 `ExternalSecret`(PR #40)이 이 금고에서 **5키**(`DB_URL`·`REDIS_HOST`·`DB_USER`·`DB_PASSWORD`·`JWT_SECRET`)를 읽어 앱에 주입. 진짜 DB 비번은 RDS 관리시크릿(`rds!db-…`) 출처. **주입 절차 = Apply ③-B** |
 
 ---
 
@@ -63,13 +63,36 @@ terraform apply -var-file=terraform.tfvars      # EKS 생성 15~20분. 생성자
 aws eks update-kubeconfig --name team1-dev-cluster --region ap-northeast-2 --profile final
 kubectl get nodes                               # 전부 Ready 확인
 
-# ③ ⭐ Grafana 시크릿 값 주입 — infra는 '빈 금고'만 만든다(§5: 진짜 비번은 사람이 주입).
+# ③-A ⭐ Grafana 시크릿 값 주입 — infra는 '빈 금고'만 만든다(§5: 진짜 비번은 사람이 주입).
 #    이 단계를 빠뜨리면 ④ platform-addons plan이 '시크릿 버전 부재'로 깨진다.
 #    dev는 destroy 시 금고가 소멸(recovery_window=0)하므로 매 apply 사이클마다 재실행(→ Known Issues 수동①).
 aws secretsmanager put-secret-value \
   --secret-id team1-dev-grafana-credentials \
   --secret-string '{"password":"<DEV_GRAFANA_PW>"}' \
   --profile final --region ap-northeast-2        # JSON 키는 반드시 "password"
+
+# ③-B ⭐ DB/앱 시크릿 주입 — team1-dev-database-credentials (config의 ExternalSecret이 읽는 금고)
+#    infra의 secret_version이 DB_URL·REDIS_HOST·REDIS_PORT '3키'를 자동 주입한다(secrets.tf).
+#    사람이 DB_USER·DB_PASSWORD·JWT_SECRET '3키'를 추가해야 ESO sync→앱 부팅이 된다(없으면 ExternalSecret 실패→앱 미기동).
+#    ⚠️ 진짜 DB 비번은 RDS 관리시크릿(rds!db-…, MasterUserSecret)에서 추출 — 1234 같은 임의값 금지.
+
+# (1) RDS 관리시크릿에서 실제 마스터 비번 추출 (값은 화면에 안 띄우고 변수로만)
+RDS_SECRET_ARN=$(aws rds describe-db-instances --db-instance-identifier team1-dev-db \
+  --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text --profile final --region ap-northeast-2)
+DB_PW=$(aws secretsmanager get-secret-value --secret-id "$RDS_SECRET_ARN" \
+  --query SecretString --output text --profile final --region ap-northeast-2 | jq -r .password)
+
+# (2) 기존 3키(DB_URL·REDIS_HOST·REDIS_PORT) 보존: get→merge→put (통째 덮어쓰기 주의)
+aws secretsmanager get-secret-value --secret-id team1-dev-database-credentials \
+  --query SecretString --output text --profile final --region ap-northeast-2 \
+  | jq --arg u "<DB_USER>" --arg p "$DB_PW" --arg j "<JWT_SECRET>" \
+       '. + {DB_USER:$u, DB_PASSWORD:$p, JWT_SECRET:$j}' > /tmp/dbcreds.json
+aws secretsmanager put-secret-value --secret-id team1-dev-database-credentials \
+  --secret-string file:///tmp/dbcreds.json --profile final --region ap-northeast-2
+rm -f /tmp/dbcreds.json          # §5: 평문 시크릿 임시파일 즉시 삭제
+#    ★ 경고: secret_version이 3키(DB_URL·REDIS_HOST·REDIS_PORT)만 관리하고 ignore_changes가 없다(secrets.tf 확인).
+#      → 이후 destroy 없이 terraform apply를 다시 돌리면 SecretString이 TF의 3키로 되돌아가 수동 3키가 날아갈 수 있다.
+#      재apply 후엔 ESO 재sync(앱 부팅) 확인. (후속 개선: ignore_changes 또는 시크릿을 ESO로 일원화 — Known Issues)
 
 # ④ platform-addons
 cd ../platform-addons
@@ -93,6 +116,19 @@ kubectl get ingressclass               # 'alb'=LBC 준비 완료(토대, D47). �
 kubectl get servicemonitor -A          # redis-exporter 등 스크레이프 대상
 ```
 
+## apply 후 ECR이 비었을 때 (ImagePullBackOff)
+
+apply 직후 앱 파드가 `ImagePullBackOff`/`ErrImagePull`(이미지 `NotFound`)이면 = **ECR이 비어있는 것**이다. 매일 destroy 시 `force_delete=true`로 이미지가 소실되기 때문(Destroy ④). infra는 ECR '저장소'만 만들고, '이미지'는 **app 레포 CI(`deploy.yml`)가 채운다** (2026-06-25 실증 — #58 re-run).
+
+```bash
+# app 레포(team1-chatguard-app)에서 — 성공했던 deploy.yml 실행을 re-run해 같은 SHA 이미지를 ECR에 재적재
+gh run list --workflow deploy.yml --limit 5    # 성공한 run id 확인
+gh run rerun <run-id>                          # config 이미지 태그와 '같은 SHA'를 재빌드
+#   → ECR 3개 저장소(api-server·ai-worker·frontend)에 이미지 재적재 → ArgoCD가 자동 pull → 파드 기동
+```
+
+> ⚠️ config(`overlays/dev`)의 이미지 태그 SHA와 **같은 SHA**를 재빌드해야 ArgoCD가 매칭한다(태그 불일치면 계속 pull 실패). (후속: ECR을 destroy 대상에서 분리(stateful)하면 이 단계 소멸.)
+
 ## Destroy (dev — apply 역순 · ⚠️ 사람 확인 필수)
 
 > ✅ **2026-06-23 실제 destroy 1회 완료** (이전 "미실행 검증" 상태 해소). 단, 그 과정에서 **야간 차단 중단 + orphan 막힘 사고**가 발생했고 손으로 복구했다 — 아래 순서를 반드시 지키고, 막히면 "Destroy 중 막힘 복구"·Known Issues 사고①을 따른다.
@@ -108,18 +144,22 @@ kubectl get servicemonitor -A          # redis-exporter 등 스크레이프 대�
 # ⓪ 시작 전 — 자격증명·시간 여유 확인
 aws sts get-caller-identity        # team1-xxx 정상 응답 확인 (InvalidAccessKeyId면 차단 시간대)
 
-# ① ⭐ (config/app이 ArgoCD로 배포된 경우) k8s 워크로드 선회수 — LBC가 LB·SG를 스스로 회수하게 함 (D49)
-#    Phase 0만 올린 상태(앱 미배포)라도 ArgoCD 자체가 LB 타입 Service라 NLB를 갖는다 → 아래 ②까지 수행.
-kubectl delete ingress --all -A                  # LBC가 만든 ALB 회수
-#    ArgoCD Application으로 배포했다면 해당 app을 먼저 제거(재싱크로 되살아남 방지)
+# ① ⭐ 워크로드 선회수 — 순서 고정. 'Application 선삭제(self-heal 차단)'가 핵심이다 (D49)
+#    Phase 0만 올린 상태(앱 미배포)라도 ArgoCD 자체가 LB 타입 Service라 NLB를 갖는다 → ②까지 반드시 수행.
+#
+#  (a) ArgoCD Application을 '가장 먼저' 제거 — 안 그러면 self-heal이 아래서 지운 Ingress를 곧바로 재생성해 ALB가 부활한다.
+kubectl get applications -n argocd                # 배포된 app 이름 확인
+kubectl delete application <app-name> -n argocd   # 여러 개면 모두 (또는 --all)
+#  (b) 그 다음 Ingress 제거 — LBC가 만든 ALB 회수
+kubectl delete ingress --all -A
+#    ※ (a) 없이 (b)만 하면 ArgoCD self-heal이 Ingress를 재생성→ALB 부활(2026-06-25 실증). Application 선삭제가 ALB까지 정리한다.
 
-# ② ⭐ LoadBalancer 타입 Service도 회수 — `delete ingress`만으론 NLB가 안 잡힌다 (2026-06-23 사고의 핵심)
-kubectl get svc -A --field-selector spec.type=LoadBalancer    # 어떤 LB 타입 Service가 있나 확인
-#    ArgoCD server 등이 보이면, 그 Service를 지우거나(아래 ③ platform-addons destroy가 정리해 주기도 함)
-#    가장 확실한 방법은 ③ 전에 LB가 회수됐는지 확인하는 것:
+# ② ⭐ LoadBalancer 타입 Service 회수 + LB 0개 '눈으로' 확인 — `delete ingress`만으론 NLB가 안 잡힌다 (2026-06-23 사고의 핵심)
+kubectl get svc -A --field-selector spec.type=LoadBalancer    # ArgoCD server 등 LB 타입 Service 확인
+kubectl delete svc <svc-name> -n <ns>                         # 남아있으면 삭제 (③ platform-addons destroy가 정리하기도 함)
 aws elbv2 describe-load-balancers \
   --query "LoadBalancers[?VpcId=='<우리_VPC_ID>'].[LoadBalancerName,Type]" --output table
-#    → 우리 VPC에 LB가 남아있지 않은 상태에서 ③로 진행 (남아있으면 위 k8s 오브젝트부터 제거)
+#    → 우리 VPC에 LB가 '0개'인 것을 확인한 뒤에만 ③로 진행 (남아있으면 위 k8s 오브젝트부터 다시 제거)
 
 # ③ platform-addons destroy (클러스터가 살아있는 동안 — provider가 클러스터에 접속)
 cd envs/dev/platform-addons
@@ -218,6 +258,24 @@ terraform destroy
 | 사고② | **(2026-06-23 실증)** 18:00 차단으로 destroy가 끊겨 state 저장 실패·락 미해제(`errored.tfstate` 잔존)                                                                              | "state 꼬임 복구" 절차                                                                           | 18:00 임박 시 destroy 미착수(운영 수칙)                                                                                          |
 | 수동① | grafana 시크릿을 매 apply 전 수동 주입(`recovery_window=0`이라 destroy 시 소멸)                                                                                                    | Apply ③의 `put-secret-value`                                                                     | ESO로 Secrets Manager 동기화(D34 최종형, config 소관) → plan이 시크릿 값에 의존하지 않게 되어 제거                               |
 | 수동② | platform-addons apply가 LBC webhook race로 1회 실패 가능                                                                                                                           | LBC 파드 Running 확인 후 재apply                                                                 | prometheus_stack 등에 LBC readiness 대기(`depends_on`)                                                                           |
-| 설계  | EKS access entry 409 — **운전자=클러스터 생성자**는 admin 목록에서 제외해야 함(bootstrap 자동 admin과 중복, D35)                                                                   | `variables.tf`의 `eks_cluster_admin_principals`에서 생성자 제외(현재 team1-cjc 제외됨)           | 운전자가 바뀌면 목록 재조정                                                                                                      |
+| 설계  | **EKS access entry 409 ResourceInUseException** — admin 목록(`eks_cluster_admin_principals`)에 **운전자(클러스터 생성자)가 포함**되면 `bootstrap_cluster_creator_admin_permissions=true`의 자동 admin과 `for_each` 생성이 충돌해 apply가 깨진다. **운전자가 누구든 재발**(현 목록은 5명 — cjc 포함, D35) | 충돌난 운전자(현재 cjc)의 access entry/policy **2건을 state로 import 후 apply 재개**(↓ "EKS 409 import 명령" 블록 — provider v5.100.0은 **3-파트 ID** 주의) | 근본해결: `bootstrap_cluster_creator_admin_permissions=false` 전환(단 **force-new=클러스터 재생성 위험** → 반드시 plan 검증). 운전자 바뀌면 ARN만 치환 |
 | 무해  | `prometheus_adapter`가 떠 있으나 스케일은 **KEDA-only**라 미사용                                                                                                                   | —                                                                                                | 후속 PR로 제거 예정                                                                                                              |
 | 사고③ | **(2026-06-24 실증)** 18:00 야간 차단 진입 후 `destroy/apply` 수행 시 `DeleteSubnet 403 UnauthorizedOperation` 및 `S3 PutObject AccessDenied` 에러와 함께 `errored.tfstate` 파편 발생 | 즉시 작업을 중단하고 다음 날 09:00 권한 부활 후 `terraform force-unlock <LOCK_ID>` -> `terraform state push errored.tfstate` 순으로 장부 수선 후 재개 | 18:00 임박 시 destroy 절대 착수 금지 수칙 엄수 및 인계서 행동 요령 인입 |
+
+### EKS 409 import 명령 (Known Issues 설계행 — `envs/dev/infra`에서 실행)
+
+운전자=cjc 기준. **운전자가 다르면 두 명령의 `team1-cjc` ARN을 그 운전자 ARN으로 치환**한다. (2026-06-25 실증 — import 2건 후 apply가 409 없이 통과.)
+
+```bash
+# ① access entry — import ID = 'cluster_name:principal_arn' (콜론 구분)
+terraform import \
+  'module.eks.aws_eks_access_entry.admins["arn:aws:iam::495599735720:user/team1-cjc"]' \
+  'team1-dev-cluster:arn:aws:iam::495599735720:user/team1-cjc'
+
+# ② access policy association — import ID = 'cluster#principal#policy' (★ 3-파트. v6의 4-파트 아님 — provider v5.100.0)
+terraform import \
+  'module.eks.aws_eks_access_policy_association.admins["arn:aws:iam::495599735720:user/team1-cjc"]' \
+  'team1-dev-cluster#arn:aws:iam::495599735720:user/team1-cjc#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy'
+
+# import 2건 성공 후 → terraform apply 재개 (이제 409 없이 통과)
+```
