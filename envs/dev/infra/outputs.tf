@@ -41,3 +41,9 @@ output "redis_port" {
   description = "Redis 포트"
   value       = module.elasticache.redis_port
 }
+
+output "chat_server_s3_role_arn" {
+  description = "채팅 서버 S3 읽기 권한을 가지는 IAM 역할의 ARN"
+  value       = aws_iam_role.chat_server_s3_role.arn
+}
+

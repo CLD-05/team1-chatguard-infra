@@ -1,0 +1,36 @@
+# envs/dev/infra/iam.tf
+
+data "aws_iam_policy_document" "chat_server_s3_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:chatguard:team1-dev-chat-server-sa"]
+    }
+  }
+}
+
+resource "aws_iam_role" "chat_server_s3_role" {
+  name                 = "team1-dev-chat-server-s3-role"
+  permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+  assume_role_policy   = data.aws_iam_policy_document.chat_server_s3_trust.json
+}
+
+resource "aws_iam_role_policy_attachment" "chat_server_s3_readonly" {
+  role       = aws_iam_role.chat_server_s3_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
