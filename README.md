@@ -29,6 +29,7 @@ ChatGuard의 **Terraform IaC 전용** 레포 (`modules/` + `envs/dev`·`envs/pro
 - 백엔드: S3 네이티브 락(`use_lockfile=true`, DynamoDB 미사용)·`encrypt=true`.
 - 앱 Deployment/Service/Ingress·HPA·KEDA ScaledObject·ServiceMonitor·ExternalSecret 등은 **여기서 안 만든다** → config 레포(GitOps/ArgoCD) 소유 (CLAUDE.md §4).
 - `modules/`는 검증본(공유). dev/prod는 **디렉터리**로 분리(브랜치 아님), 차이는 tfvars로만.
+- **`kubernetes_namespace.chatguard`는 platform-addons(Terraform) 소유** — `kubectl create namespace chatguard` 수동 생성 금지(만들면 다음 platform-addons apply와 소유권 충돌). 이미 만들었으면 채택: `terraform import kubernetes_namespace.chatguard chatguard` → plan에서 **라벨만 in-place**(`Team`·`managed-by` 백필)·replace 아님 확인 후 apply (2026-06-26 실증).
 
 > ⚠️ **소유 경계와 destroy의 관계** (CLAUDE.md §4): ALB/NLB는 Terraform이 아니라 **LBC(파드)가 Ingress·LoadBalancer Service를 보고** 만든다. 이 LBC 생성물은 Terraform `default_tags`가 **안 타서 `Team` 태그가 비어 있다.** destroy 시 이 점이 사고를 부른다 → Destroy 섹션·Known Issues 사고① 필독.
 
@@ -94,14 +95,27 @@ rm -f /tmp/dbcreds.json          # §5: 평문 시크릿 임시파일 즉시 삭
 #      → 이후 destroy 없이 terraform apply를 다시 돌리면 SecretString이 TF의 3키로 되돌아가 수동 3키가 날아갈 수 있다.
 #      재apply 후엔 ESO 재sync(앱 부팅) 확인. (후속 개선: ignore_changes 또는 시크릿을 ESO로 일원화 — Known Issues)
 
+# ③-C ⭐ 금칙어 S3 시드 파일 — chat-server 첫 부팅(Flyway V2) '전'에 올려야 한다 (2026-06-26 실증, D51)
+#    infra ①이 만드는 버킷 team1-dev-chatguard-migration 에 banned_words.txt 를 수동 업로드(평문 금칙어 → git 미커밋).
+aws s3 cp banned_words.txt s3://team1-dev-chatguard-migration/banned_words.txt --region ap-northeast-2 --profile final
+#    ⚠️ 안 올리면: chat-server가 더미 4단어로 fallback하고 Flyway V2가 '적용됨'으로 굳어, 파일을 나중에 올려도 같은 DB에선 재시드 안 됨(D51 트랩).
+#    검증: banned_words count == 4 → fallback / > 4(예: 1880) → S3 성공. 로그 'Successfully seeded ... from S3' vs 'falling back to local file'.
+#    복구: 다음 destroy 사이클의 새 DB가 빈 스키마로 부팅하며 자동 재시드(권장) / 또는 DB 리셋(flyway_schema_history의 version='2' 행 삭제 + banned_words 비우고 chat-server 재기동).
+#    ※ STS 모듈·Flyway 내부 동작은 app 도메인 → DESIGN.md D51 참조(여기선 운영 포인터만).
+
 # ④ platform-addons
 cd ../platform-addons
 terraform init
 terraform plan  -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars
-#    LBC webhook race로 1회 실패할 수 있음 → 아래로 LBC 파드 Running 확인 후 재apply하면
-#    Terraform이 실패 릴리스를 정리하고 재생성한다(검증됨).
-kubectl get pods -n kube-system | grep aws-load-balancer-controller
+#    LBC webhook race로 prometheus_stack이 'failed'로 1회 깨질 수 있음 (2026-06-26 실증).
+#    ★ 정정: Terraform은 실패 릴리스를 자동 청소하지 않는다 → 아래처럼 수동 청소 후 재apply.
+#    ① LBC Ready 확인:
+kubectl get pods -n kube-system | grep aws-load-balancer-controller          # 2개 1/1 Running
+kubectl get endpoints aws-load-balancer-webhook-service -n kube-system       # ENDPOINTS에 IP 있어야 함(비면 race 재발)
+#    ② 실패 릴리스 제거 (CRD는 보존 — 재apply가 재사용):
+helm uninstall kube-prometheus-stack -n monitoring
+#    ③ terraform apply 재실행 → prometheus 3종(stack·adapter·redis_exporter) 재생성. ESO(external-secrets) 릴리스는 정상이므로 건드리지 말 것.
 ```
 
 ## 검증 (apply 후 토대 확인 — 검증된 명령)
@@ -278,4 +292,6 @@ terraform import \
   'team1-dev-cluster#arn:aws:iam::495599735720:user/team1-cjc#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy'
 
 # import 2건 성공 후 → terraform apply 재개 (이제 409 없이 통과)
+# ★ import 후 plan 정상 형태(2026-06-26 실증): "N add(타 admin들의 policy association) / 1 change(cjc entry 태그 백필) / 0 destroy".
+#   destroy·replace(특히 클러스터 force-replace=D35 신호)가 섞이면 멈추고 검토.
 ```
