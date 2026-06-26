@@ -187,6 +187,11 @@ resource "helm_release" "redis_exporter" {
 
   values = [yamlencode({
     redisAddress = "redis://${local.redis_endpoint}:${local.redis_port}"
+    # mod:queue LLEN을 redis_key_size{key="mod:queue"}로 노출 → "큐 깊이" 대시보드 패널(B-2/B-3).
+    # 렌더링 결과 = exporter 인자 --check-keys=mod:queue. KEDA 스케일과 무관(KEDA는 Redis 직독).
+    extraArgs = {
+      "check-keys" = "mod:queue"
+    }
     serviceMonitor = {
       enabled = true
       labels = {
