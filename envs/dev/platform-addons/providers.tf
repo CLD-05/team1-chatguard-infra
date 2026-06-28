@@ -19,6 +19,16 @@ terraform {
 provider "aws" {
   region  = "ap-northeast-2"
   profile = "final"
+
+  # #9: 이 provider가 만드는 LBC/ESO IRSA role 등에 Team 태그 부착(가드레일·D49). dev/infra provider와 동일 형태.
+  default_tags {
+    tags = {
+      Team        = "team1"
+      Environment = "dev"
+      Project     = "chatguard"
+      Owner       = "infra-lead"
+    }
+  }
 }
 
 data "terraform_remote_state" "infra" {
