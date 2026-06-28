@@ -39,14 +39,12 @@ module "database" {
 
   instance_class = var.rds_instance_class
 
-  # 운영계 전용 삭제 방지 및 고가용성 파라미터 명시적 강제 주입
-  deletion_protection     = true
-  skip_final_snapshot     = false
+  # D54-a(현 단계): prod 미가동·매일 destroy → 삭제 가능·최종 스냅샷 미생성. backup/multi_az는 운영성/HA 테스트로 유지.
+  # 보존 전환(prod 실가동·장기테스트) 시: deletion_protection=true + skip_final_snapshot=false + 유니크 final_snapshot_identifier 주입.
+  deletion_protection     = false
+  skip_final_snapshot     = true
   backup_retention_period = 7
   multi_az                = true
-
-  # D54-a: skip_final_snapshot=false라 최종 스냅샷 이름 필수(없으면 destroy/replace 에러). 정적 이름(timestamp 금지).
-  final_snapshot_identifier = "team1-prod-db-final"
 }
 
 module "elasticache" {
