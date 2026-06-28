@@ -7,10 +7,9 @@ locals {
 }
 
 module "network" {
-  source      = "../../../modules/network"
-  vpc_cidr    = var.vpc_cidr
-  vpc_name    = "${local.name_prefix}-vpc"
-  environment = var.env # "prod" 주입
+  source   = "../../../modules/network"
+  vpc_cidr = var.vpc_cidr
+  vpc_name = "${local.name_prefix}-vpc"
 }
 
 module "eks" {

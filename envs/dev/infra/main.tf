@@ -8,10 +8,9 @@ locals {
 
 # 네트워크 인프라 대지 조성
 module "network" {
-  source      = "../../../modules/network"
-  vpc_cidr    = var.vpc_cidr
-  vpc_name    = "${local.name_prefix}-vpc"
-  environment = var.env
+  source   = "../../../modules/network"
+  vpc_cidr = var.vpc_cidr
+  vpc_name = "${local.name_prefix}-vpc"
 
   public_subnet_extra_tags = { "kubernetes.io/role/elb" = "1" } # ALB(인터넷)용 서브넷 디스커버리 태그 — LBC가 public 서브넷 식별. D47
 }

@@ -12,4 +12,4 @@ keda_chart_version       = "2.12.0"
 
 external_secrets_chart_version   = "0.9.11" # External Secrets Operator (ESO)
 aws_lbc_chart_version            = "1.7.2"  # AWS Load Balancer Controller (LBC)
-redis_exporter_chart_version     = "0.15.0" # Prometheus Redis Exporter
+redis_exporter_chart_version     = "6.3.0" # Prometheus Redis Exporter (dev와 동일 유효 버전; 0.15.0은 존재하지 않는 버전)

@@ -47,6 +47,9 @@ resource "helm_release" "argocd" {
       }
     })
   ]
+
+  # B-5: LBC(webhook) Ready 이후에 argocd LoadBalancer Service를 생성 → 첫 apply 시 LBC 웹훅 레이스 제거.
+  depends_on = [helm_release.lbc]
 }
 
 # =========================================================================

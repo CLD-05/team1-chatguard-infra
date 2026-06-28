@@ -8,11 +8,6 @@ variable "vpc_name" {
   type        = string
 }
 
-variable "environment" {
-  description = "환경 구분 (dev 또는 prod)"
-  type        = string
-}
-
 variable "public_subnet_extra_tags" {
   type        = map(string)
   default     = {}
