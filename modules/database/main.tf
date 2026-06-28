@@ -67,5 +67,8 @@ resource "aws_db_instance" "this" {
   backup_retention_period = var.backup_retention_period
   multi_az                = var.multi_az
 
+  # D54-a: skip_final_snapshot=false(prod)면 최종 스냅샷 이름이 필수(없으면 destroy/replace 시 에러). dev는 skip=true → null.
+  final_snapshot_identifier = var.skip_final_snapshot ? null : var.final_snapshot_identifier
+
   tags = { Name = var.db_name }
 }
