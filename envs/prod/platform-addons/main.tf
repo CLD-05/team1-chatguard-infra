@@ -85,6 +85,13 @@ resource "helm_release" "prometheus_stack" {
           existingSecret   = "grafana-admin-credentials"
           adminPasswordKey = "password"
         }
+        # D55: 사이드카가 chatguard ns의 대시보드 ConfigMap(config PR #46)을 인식하도록.
+        # 기본값(null)은 릴리스 ns(monitoring)만 감시 → chatguard ns CM 미인식.
+        sidecar = {
+          dashboards = {
+            searchNamespace = "ALL"
+          }
+        }
       }
     })
   ]
