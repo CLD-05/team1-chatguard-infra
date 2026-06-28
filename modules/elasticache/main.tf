@@ -45,10 +45,12 @@ resource "aws_elasticache_replication_group" "this" {
   replication_group_id = var.cache_name
   description          = "Redis cluster for ChatGuard session and pub/sub"
 
-  engine             = "redis"
-  engine_version     = "7.1"
-  node_type          = var.node_type
-  num_cache_clusters = 1 # dev 비용 최적화: 1개 노드로 구성 (prod는 2개 이상 확장)
+  engine                     = "redis"
+  engine_version             = "7.1"
+  node_type                  = var.node_type
+  num_cache_clusters         = var.num_cache_clusters         # D54-a: dev default 1 → prod 2+
+  automatic_failover_enabled = var.automatic_failover_enabled # D54-a: prod HA(노드 2+ 필요)
+  multi_az_enabled           = var.multi_az_enabled           # D54-a: prod HA(replica AZ 분산)
 
   subnet_group_name  = aws_elasticache_subnet_group.this.name
   security_group_ids = [aws_security_group.redis.id]

@@ -44,6 +44,9 @@ module "database" {
   skip_final_snapshot     = false
   backup_retention_period = 7
   multi_az                = true
+
+  # D54-a: skip_final_snapshot=false라 최종 스냅샷 이름 필수(없으면 destroy/replace 에러). 정적 이름(timestamp 금지).
+  final_snapshot_identifier = "team1-prod-db-final"
 }
 
 module "elasticache" {
@@ -58,6 +61,11 @@ module "elasticache" {
   ]
 
   node_type = var.redis_node_type
+
+  # D54-a: prod Redis HA — 2노드 + 자동 failover + Multi-AZ(현행 isolated 2 AZ로 충족). dev는 미주입(default 단일).
+  num_cache_clusters         = 2
+  automatic_failover_enabled = true
+  multi_az_enabled           = true
 }
 
 # 운영계 AWS Secrets Manager 내용물 자동 주입 설정

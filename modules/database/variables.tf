@@ -47,3 +47,10 @@ variable "multi_az" {
   description = "다중 가용구역(Multi-AZ) 고가용성 복제 활성화 여부"
   default     = false # dev 환경은 단일 AZ로 비용 최적화
 }
+
+# D54-a: skip_final_snapshot=false(prod)일 때 필요한 최종 스냅샷 식별자. dev는 skip=true라 null로 무관 → plan 변화 0.
+variable "final_snapshot_identifier" {
+  type        = string
+  description = "DB 삭제/교체 시 생성할 최종 스냅샷 이름(prod 보존용). dev는 default null."
+  default     = null
+}
