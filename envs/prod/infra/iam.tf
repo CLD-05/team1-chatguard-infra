@@ -44,17 +44,18 @@ resource "aws_iam_role_policy" "chat_server_s3_readonly" {
   role = aws_iam_role.chat_server_s3_role.id
 
   # prod엔 chatguard-assets 버킷이 없다 → 미디어는 team1-prod-images(module.s3_images).
-  # 금칙어 시드는 team1-prod-chatguard-migration(main.tf, D51).
+  # 금칙어 시드는 banned_words 버킷(main.tf, D51).
+  # 하드코딩 ARN 대신 리소스/모듈 참조 → 버킷명 변경 시 정책 자동 추종(silent break 방지).
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
       Action = ["s3:GetObject", "s3:ListBucket"]
       Resource = [
-        "arn:aws:s3:::team1-prod-images",
-        "arn:aws:s3:::team1-prod-images/*",
-        "arn:aws:s3:::team1-prod-chatguard-migration",
-        "arn:aws:s3:::team1-prod-chatguard-migration/*"
+        module.s3_images.bucket_arn,
+        "${module.s3_images.bucket_arn}/*",
+        aws_s3_bucket.banned_words_bucket.arn,
+        "${aws_s3_bucket.banned_words_bucket.arn}/*"
       ]
     }]
   })

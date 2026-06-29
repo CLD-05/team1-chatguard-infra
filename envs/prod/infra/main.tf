@@ -102,14 +102,15 @@ module "s3_frontend" {
   bucket_name = "${local.name_prefix}-frontend" # 프론트엔드 정적 파일 배포용 버킷
 }
 
-# 금칙어 시딩 및 데이터 마이그레이션 전용 완전 격리형 Private S3 버킷 (D51)
+# 금칙어 시드 전용 완전 격리형 Private S3 버킷 (D51)
 # banned_words.txt는 수동 주입(git 미커밋). chat-server IRSA(iam.tf)가 read.
+# 버킷명: 슬러그 'chatguard' 제외(C-2 — 슬러그는 리포명에만), 용도 명확한 banned-words.
 resource "aws_s3_bucket" "banned_words_bucket" {
-  bucket        = "${local.name_prefix}-chatguard-migration"
+  bucket        = "${local.name_prefix}-banned-words"
   force_destroy = true # prod 매일 destroy → 비어있지 않아도 삭제 허용(시드 파일은 apply 후 재주입)
 
   tags = {
-    Name        = "${local.name_prefix}-chatguard-migration"
+    Name        = "${local.name_prefix}-banned-words"
     Environment = "prod"
     Component   = "backend"
   }
