@@ -49,7 +49,7 @@ data "terraform_remote_state" "infra" {
 # ==============================================================================
 provider "kubernetes" {
   host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
-  cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_ca_certificate) # 🟢 1층 아웃풋 명칭 정합성 동기화
+  cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority) # 🟢 PR-1 출력명(eks_cluster_certificate_authority)과 정합
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
@@ -64,7 +64,7 @@ provider "kubernetes" {
 provider "helm" {
   kubernetes {
     host                   = data.terraform_remote_state.infra.outputs.eks_cluster_endpoint
-    cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_ca_certificate) # 🟢 1층 아웃풋 명칭 정합성 동기화
+    cluster_ca_certificate = base64decode(data.terraform_remote_state.infra.outputs.eks_cluster_certificate_authority) # 🟢 PR-1 출력명(eks_cluster_certificate_authority)과 정합
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"

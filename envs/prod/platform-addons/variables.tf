@@ -25,3 +25,9 @@ variable "env" {
   description = "환경 구분 (dev 또는 prod)"
   default     = "prod"
 }
+
+variable "permissions_boundary_arn" {
+  type        = string
+  description = "학생 생성 IAM role 필수 권한 경계(CLAUDE.md §1-7, 없으면 apply 거부) — LBC·ESO IRSA role에 부착"
+  default     = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
+}
