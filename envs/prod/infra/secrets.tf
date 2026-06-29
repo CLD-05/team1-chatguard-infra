@@ -5,6 +5,26 @@ resource "aws_secretsmanager_secret" "redis_secret" {
 }
 
 # =========================================================================
+# JWT 서명 키 금고 — config 레포 prod ExternalSecret이 secret_key→JWT_SECRET으로 읽음.
+# (prod ESO 계약: rds!db-…(DB자동) + team1-prod-jwt-credentials. DB_URL/REDIS는 ConfigMap 리터럴.)
+# =========================================================================
+resource "aws_secretsmanager_secret" "jwt_secret" {
+  name                    = "team1-prod-jwt-credentials"
+  description             = "ChatGuard prod 환경 JWT 서명 키 금고(secret_key 수동 주입)"
+  recovery_window_in_days = 0 # prod 매일 destroy → 즉시 삭제 허용(7일 복구창은 동일 이름 재생성 차단). dev redis/grafana 금고와 동일 관례.
+
+  tags = {
+    Name = "team1-prod-jwt-credentials"
+  }
+
+  # B-3: 컨테이너만 생성하고 값(secret_key)은 수동 주입(openssl rand -base64 32).
+  #   - 매일 destroy + recovery_window=0 → 주입한 값이 destroy마다 소실 → apply 후 재주입 + chat-server/worker rollout.
+  #   - 지금은 TF secret_version이 없어 덮어쓰기 위험 없음. 향후 이 금고에 자동 secret_version을 추가한다면
+  #     반드시 lifecycle { ignore_changes = [secret_string] } 를 붙여 수동 주입 secret_key 클로버를 막을 것.
+  #   - 근본해결(자동 주입/회전)은 후속(B-3 트래커).
+}
+
+# =========================================================================
 # ArgoCD EKS 조작을 위한 관리자 IAM 역할 생성
 # =========================================================================
 resource "aws_iam_role" "eks_admin_role" {
