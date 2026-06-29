@@ -20,6 +20,9 @@ module "eks" {
   instance_types = var.eks_instance_types
   desired_size   = var.eks_desired_size
 
+  # D53: arm 노드(m7g — m type, 부하테스트 정확도). tfvars eks_instance_types=m7g.large와 동반.
+  ami_type = "AL2023_ARM_64_STANDARD"
+
   iam_role_permissions_boundary = var.iam_role_permissions_boundary
 
   public_access_cidrs = var.eks_public_access_cidrs

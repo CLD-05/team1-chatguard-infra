@@ -2,7 +2,7 @@ team     = "team1"
 env      = "prod"
 vpc_cidr = "10.1.128.0/17"
 
-eks_instance_types = ["t3.large"]
+eks_instance_types = ["m7g.large"] # D53: arm(m type). caller의 ami_type=AL2023_ARM_64_STANDARD와 동반.
 eks_desired_size   = 3 # 가용구역 3곳에 분산 배치 (HA)
 rds_instance_class = "db.t4g.small"
 redis_node_type    = "cache.t4g.small"
