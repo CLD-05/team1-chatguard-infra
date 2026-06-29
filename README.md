@@ -40,6 +40,15 @@ export AWS_PROFILE=final          # 계정 495599735720 · ap-northeast-2
 aws sts get-caller-identity       # team1-* 유저인지 확인 (자격증명 살아있는지도 겸사 확인)
 ```
 
+자주 쓰는 조회값 미리 잡기 (destroy의 **LB 확인·막힘 복구**에서 `$VPC_ID` 재사용 — 같은 셸에서):
+
+```bash
+# 인프라가 이미 올라가 있을 때만 값이 잡힌다(apply 전엔 None)
+VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Team,Values=team1" \
+  --query 'Vpcs[0].VpcId' --output text --region ap-northeast-2)
+echo "VPC_ID=$VPC_ID"   # vpc-... = OK / None = 인프라 미생성
+```
+
 각 루트에서 `terraform.tfvars` 준비(실물은 `.gitignore` 대상 — **커밋 금지**):
 
 ```bash
@@ -59,6 +68,8 @@ cd envs/dev/infra
 terraform init
 terraform plan  -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars      # EKS 생성 15~20분. 생성자=운전자는 bootstrap으로 자동 admin
+#   ★ 409 ResourceInUseException 뜨면 = 매 새 클러스터 정상(생성자 access entry 충돌, Known Issues 설계행).
+#     맨 아래 "EKS 409 import 명령" 2건 실행(운전자 ARN 치환) 후 apply 재개 → 정상 결과 "N added, 1 changed, 0 destroyed".
 
 # ② kubeconfig + 노드 확인
 aws eks update-kubeconfig --name team1-dev-cluster --region ap-northeast-2 --profile final
@@ -77,20 +88,34 @@ aws secretsmanager put-secret-value \
 #    사람이 DB_USER·DB_PASSWORD·JWT_SECRET '3키'를 추가해야 ESO sync→앱 부팅이 된다(없으면 ExternalSecret 실패→앱 미기동).
 #    ⚠️ 진짜 DB 비번은 RDS 관리시크릿(rds!db-…, MasterUserSecret)에서 추출 — 1234 같은 임의값 금지.
 
-# (1) RDS 관리시크릿에서 실제 마스터 비번 추출 (값은 화면에 안 띄우고 변수로만)
+# (1) RDS에서 마스터 사용자명·비번 자동 추출 (★ <DB_USER> 수동 입력 금지 — 2026-06-29 'Access denied' 함정의 근본)
+DB_USER=$(aws rds describe-db-instances --db-instance-identifier team1-dev-db \
+  --query 'DBInstances[0].MasterUsername' --output text --profile final --region ap-northeast-2)
 RDS_SECRET_ARN=$(aws rds describe-db-instances --db-instance-identifier team1-dev-db \
   --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text --profile final --region ap-northeast-2)
 DB_PW=$(aws secretsmanager get-secret-value --secret-id "$RDS_SECRET_ARN" \
   --query SecretString --output text --profile final --region ap-northeast-2 | jq -r .password)
 
-# (2) 기존 3키(DB_URL·REDIS_HOST·REDIS_PORT) 보존: get→merge→put (통째 덮어쓰기 주의)
+# (2) JWT_SECRET 생성 — ★ 32바이트(256비트) 이상 필수(짧으면 chat-server WeakKeyException CrashLoop)
+JWT_SECRET=$(openssl rand -base64 32)
+
+# (3) 기존 3키(DB_URL·REDIS_HOST·REDIS_PORT) 보존: get→merge→put (이제 $DB_USER·$JWT_SECRET 변수라 placeholder 안 들어감)
 aws secretsmanager get-secret-value --secret-id team1-dev-database-credentials \
   --query SecretString --output text --profile final --region ap-northeast-2 \
-  | jq --arg u "<DB_USER>" --arg p "$DB_PW" --arg j "<JWT_SECRET>" \
+  | jq --arg u "$DB_USER" --arg p "$DB_PW" --arg j "$JWT_SECRET" \
        '. + {DB_USER:$u, DB_PASSWORD:$p, JWT_SECRET:$j}' > /tmp/dbcreds.json
 aws secretsmanager put-secret-value --secret-id team1-dev-database-credentials \
   --secret-string file:///tmp/dbcreds.json --profile final --region ap-northeast-2
 rm -f /tmp/dbcreds.json          # §5: 평문 시크릿 임시파일 즉시 삭제
+
+# (4) 시크릿 반영 — ★ ESO refresh + chat-server·worker '둘 다' 재시작
+#     (한쪽만 재시작하면 다른 쪽이 옛 값으로 동작 — 2026-06-29 worker 놓침 실증)
+kubectl annotate externalsecret -n chatguard --all force-sync=$(date +%s) --overwrite
+kubectl get secret chatguard-secrets -n chatguard -o jsonpath='{.data.DB_USER}' | base64 -d; echo   # 실값 확인(admin 등; '<DB_USER>'면 (1) 누락)
+kubectl rollout restart deploy/team1-dev-chat-server deploy/team1-dev-moderation-worker -n chatguard
+
+# ⚠️ 2026-06-29 실증 함정(③-B): ① <DB_USER>를 그대로 두면 'Access denied for user <DB_USER>'로 Flyway·chat-server CrashLoop(위 (1) RDS 자동 추출로 방지).
+#    ② JWT_SECRET이 32바이트 미만이면 WeakKeyException으로 chat-server CrashLoop(위 (2) openssl rand -base64 32 사용).
 #    ★ 경고: secret_version이 3키(DB_URL·REDIS_HOST·REDIS_PORT)만 관리하고 ignore_changes가 없다(secrets.tf 확인).
 #      → 이후 destroy 없이 terraform apply를 다시 돌리면 SecretString이 TF의 3키로 되돌아가 수동 3키가 날아갈 수 있다.
 #      재apply 후엔 ESO 재sync(앱 부팅) 확인. (후속 개선: ignore_changes 또는 시크릿을 ESO로 일원화 — Known Issues)
@@ -110,6 +135,9 @@ terraform plan  -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars
 #    LBC webhook race로 prometheus_stack이 'failed'로 1회 깨질 수 있음 (2026-06-26 실증).
 #    ★ 정정: Terraform은 실패 릴리스를 자동 청소하지 않는다 → 아래처럼 수동 청소 후 재apply.
+#    ※ B-5(2026-06-29): argocd엔 depends_on=[helm_release.lbc]를 걸었으나 prometheus_stack은 여전히 race 가능 —
+#      depends_on은 LBC '설치 완료'만 보장하고 '파드 Ready(webhook 응답)'는 미보장(LBC ~1분50초 후 Ready).
+#      근본해결=prometheus_stack에도 depends_on+readiness 대기(후속). 현재는 위 uninstall→재apply로 정상 복구되어 운영 지장 없음.
 #    ① LBC Ready 확인:
 kubectl get pods -n kube-system | grep aws-load-balancer-controller          # 2개 1/1 Running
 kubectl get endpoints aws-load-balancer-webhook-service -n kube-system       # ENDPOINTS에 IP 있어야 함(비면 race 재발)
@@ -172,7 +200,7 @@ kubectl delete ingress --all -A
 kubectl get svc -A --field-selector spec.type=LoadBalancer    # ArgoCD server 등 LB 타입 Service 확인
 kubectl delete svc <svc-name> -n <ns>                         # 남아있으면 삭제 (③ platform-addons destroy가 정리하기도 함)
 aws elbv2 describe-load-balancers \
-  --query "LoadBalancers[?VpcId=='<우리_VPC_ID>'].[LoadBalancerName,Type]" --output table
+  --query "LoadBalancers[?VpcId=='$VPC_ID'].[LoadBalancerName,Type]" --output table   # VPC_ID 미설정이면 '사전 준비'의 헬퍼 먼저 실행
 #    → 우리 VPC에 LB가 '0개'인 것을 확인한 뒤에만 ③로 진행 (남아있으면 위 k8s 오브젝트부터 다시 제거)
 
 # ③ platform-addons destroy (클러스터가 살아있는 동안 — provider가 클러스터에 접속)
@@ -206,7 +234,7 @@ aws ec2 describe-network-interfaces \
 
 # B) VPC가 안 지워질 때 — 보통 LBC가 만든 보안그룹(SG)이 붙잡음
 aws ec2 describe-security-groups \
-  --filters "Name=vpc-id,Values=<우리_VPC_ID>" \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
   --query 'SecurityGroups[?GroupName!=`default`].[GroupId,GroupName]' --output table
 #   → k8s-traffic-... / k8s-argocd-... 등이 보이면 그 SG가 범인.
 
