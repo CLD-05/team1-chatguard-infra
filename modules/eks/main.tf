@@ -91,6 +91,7 @@ resource "aws_eks_node_group" "this" {
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = var.subnet_ids
 
+  ami_type       = var.ami_type # D53: null=AWS 기본(x86), arm은 AL2023_ARM_64_STANDARD. instance_types와 동반 필수(ForceNew).
   instance_types = var.instance_types
 
   scaling_config {

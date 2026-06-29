@@ -19,6 +19,14 @@ variable "instance_types" {
   default     = ["t3.medium"]
 }
 
+# D53: 노드 AMI 타입. default null = AWS 기본(현행 x86) → 안 넘기는 환경 무영향.
+# arm 노드는 "AL2023_ARM_64_STANDARD". ★ instance_types(arch)와 반드시 동반 — arm 인스턴스 + x86 AMI는 부팅 실패.
+variable "ami_type" {
+  description = "EKS 노드그룹 AMI 타입(예: AL2023_ARM_64_STANDARD). null이면 AWS 기본(x86)."
+  type        = string
+  default     = null
+}
+
 variable "desired_size" {
   description = "EKS 가동 시 유지할 기본 노드 개수"
   type        = number

@@ -22,6 +22,10 @@ module "eks" {
   vpc_id       = module.network.vpc_id
   subnet_ids   = module.network.private_subnet_ids
 
+  # D53: arm 노드(t4g — t type 유지=비용·오토스케일 데모 유리). ami_type과 instance_types 동반 필수.
+  instance_types = ["t4g.medium"]
+  ami_type       = "AL2023_ARM_64_STANDARD"
+
   iam_role_permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
   public_access_cidrs           = var.eks_public_access_cidrs
 
