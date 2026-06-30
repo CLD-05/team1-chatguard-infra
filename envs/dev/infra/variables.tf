@@ -36,3 +36,13 @@ variable "db_name" {
   description = "MySQL 데이터베이스 이름"
   default     = "chatguard"
 }
+
+variable "slack_workspace_id" {
+  description = "AWS 챗봇과 연동할 슬랙 워크스페이스(팀)의 고유 ID"
+  type        = string
+}
+
+variable "slack_channel_id" {
+  description = "알람 경보 메시지를 받을 슬랙 채널(단톡방)의 고유 ID"
+  type        = string
+}

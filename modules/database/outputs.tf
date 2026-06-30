@@ -15,3 +15,8 @@ output "db_secret_arn" {
   description = "AWS Secrets Manager가 자동 생성한 마스터 패스워드 금고 ARN"
   value       = one(aws_db_instance.this.master_user_secret[*].secret_arn)
 }
+
+output "db_instance_id" {
+  description = "CloudWatch 감시 카메라가 사용할 RDS 인스턴스 식별자"
+  value       = aws_db_instance.this.id
+}

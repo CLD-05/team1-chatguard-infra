@@ -6,3 +6,6 @@
 team     = "team1"
 env      = "dev"
 vpc_cidr = "10.1.0.0/17" # dev 전용. ⚠️ prod는 10.1.128.0/17 — 절대 혼동 금지.
+
+slack_workspace_id = ""  # 슬랙 워크스페이스 고유 ID
+slack_channel_id   = ""  # 알람을 받을 슬랙 단톡방 채널 ID
