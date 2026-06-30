@@ -1,0 +1,2 @@
+slack_workspace_id = ""  # 슬랙 워크스페이스 고유 ID
+slack_channel_id   = ""  # 알람을 받을 슬랙 단톡방 채널 ID
