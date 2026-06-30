@@ -1,7 +1,8 @@
 # envs/dev/infra-base/budget.tf
 
 resource "aws_sns_topic" "budget_alert_topic" {
-  name = "team1-${var.env}-budget-alert-topic"
+  name              = "team1-${var.env}-budget-alert-topic"
+  kms_master_key_id = "alias/aws/sns"
 }
 
 data "aws_iam_policy_document" "budget_chatbot_assume" {

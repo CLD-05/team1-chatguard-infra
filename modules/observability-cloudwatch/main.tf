@@ -1,7 +1,8 @@
 # modules/observability-cloudwatch/main.tf
 
 resource "aws_sns_topic" "db_alert_topic" {
-  name = "team1-${var.env}-db-alert-topic"
+  name              = "team1-${var.env}-db-alert-topic"
+  kms_master_key_id = "alias/aws/sns"
 }
 
 data "aws_iam_policy_document" "chatbot_assume" {
