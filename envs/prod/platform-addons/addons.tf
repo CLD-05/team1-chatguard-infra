@@ -141,7 +141,7 @@ data "aws_iam_policy_document" "eso" {
     effect  = "Allow"
     actions = ["kms:Decrypt"]
     # aws/secretsmanager 관리형 키 — 계정·리전당 고정, 매일 destroy/apply에도 ARN 불변(RDS UUID와 달리).
-    resources = ["arn:aws:kms:ap-northeast-2:495599735720:key/b9cbb661-534e-47ff-a751-6e1b8c80271e"]
+    resources = ["arn:aws:kms:ap-northeast-2:${data.aws_caller_identity.current.account_id}:key/b9cbb661-534e-47ff-a751-6e1b8c80271e"]
     condition {
       test     = "StringEquals"
       variable = "kms:ViaService"
