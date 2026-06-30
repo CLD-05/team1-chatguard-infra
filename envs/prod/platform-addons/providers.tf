@@ -53,7 +53,7 @@ provider "kubernetes" {
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # 🟢 prod 프로파일 적용
+    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # AWS_PROFILE=final (dev·prod 공통, CLAUDE.md §0)
     command     = "aws"
   }
 }
@@ -68,7 +68,7 @@ provider "helm" {
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # 🟢 prod 프로파일 적용
+      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # AWS_PROFILE=final (dev·prod 공통, CLAUDE.md §0)
       command     = "aws"
     }
   }
