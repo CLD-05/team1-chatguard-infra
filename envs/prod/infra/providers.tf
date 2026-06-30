@@ -16,7 +16,7 @@ terraform {
 
 provider "aws" {
   region  = "ap-northeast-2"
-  profile = "final-prod" # 운영 격리용 AWS CLI 프로파일 강제 지정 (실수 배포 방지)
+  profile = "final" # 운영 격리용 AWS CLI 프로파일 강제 지정 (실수 배포 방지)
 
   default_tags {
     tags = {

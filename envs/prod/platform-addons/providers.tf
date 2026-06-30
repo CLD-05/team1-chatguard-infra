@@ -20,7 +20,7 @@ terraform {
 
 provider "aws" {
   region  = "ap-northeast-2"
-  profile = "final-prod"
+  profile = "final"
 
   default_tags {
     tags = {
@@ -39,7 +39,7 @@ data "terraform_remote_state" "infra" {
   backend = "s3"
   config = {
     bucket = "tfstate-lionkdt5-team1"
-    key    = "prod/infra/terraform.tfstate"
+    key    = "team1/prod/infra/terraform.tfstate"
     region = "ap-northeast-2"
   }
 }
@@ -53,7 +53,7 @@ provider "kubernetes" {
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final-prod"] # 🟢 prod 프로파일 적용
+    args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # 🟢 prod 프로파일 적용
     command     = "aws"
   }
 }
@@ -68,7 +68,7 @@ provider "helm" {
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final-prod"] # 🟢 prod 프로파일 적용
+      args        = ["eks", "get-token", "--cluster-name", data.terraform_remote_state.infra.outputs.eks_cluster_name, "--profile", "final"] # 🟢 prod 프로파일 적용
       command     = "aws"
     }
   }
