@@ -41,7 +41,7 @@ resource "aws_budgets_budget" "team_cost_budget" {
 
   cost_filter {
     name   = "TagKeyValue"
-    values = ["User:Team$team1"]
+    values = ["user:Team$team1"]
   }
 
   notification {
