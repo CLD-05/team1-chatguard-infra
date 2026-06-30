@@ -16,7 +16,8 @@ terraform {
 
 provider "aws" {
   region  = "ap-northeast-2"
-  profile = "final-prod" # 운영 격리용 AWS CLI 프로파일 강제 지정 (실수 배포 방지)
+  profile = "final" # dev·prod 동일 계정(495599735720)·단일 프로필. 환경 격리는
+  #   디렉터리(envs/)+state key로 처리(CLAUDE.md §3·§5).
 
   default_tags {
     tags = {
