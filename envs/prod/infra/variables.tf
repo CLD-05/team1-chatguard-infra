@@ -22,7 +22,6 @@ variable "availability_zones" {
 variable "single_nat_gateway" {
   description = "true=NAT 1개 공유(비용). false=AZ별 NAT + AZ별 private RT(prod HA). D54 — prod tfvars=false."
   type        = bool
-  default     = true
 }
 
 variable "eks_instance_types" {
