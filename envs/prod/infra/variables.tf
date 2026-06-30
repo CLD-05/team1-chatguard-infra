@@ -33,11 +33,6 @@ variable "redis_node_type" {
   type        = string
 }
 
-variable "domain_name" {
-  type        = string
-  description = "서비스 창구 도메인 주소"
-}
-
 variable "iam_role_permissions_boundary" {
   type        = string
   description = "IAM Role생성 규제용 Permissions Boundary ARN"

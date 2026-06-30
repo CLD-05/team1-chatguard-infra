@@ -124,11 +124,6 @@ resource "aws_s3_bucket_versioning" "banned_words_versioning" {
   }
 }
 
-module "route53" {
-  source      = "../../../modules/route53"
-  domain_name = var.domain_name
-}
-
 # =========================================================================
 # 운영계 ArgoCD용 IAM 역할 EKS RBAC 매핑
 # =========================================================================
