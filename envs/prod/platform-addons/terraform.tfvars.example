@@ -13,3 +13,11 @@ keda_chart_version       = "2.12.0"
 external_secrets_chart_version   = "0.9.11" # External Secrets Operator (ESO)
 aws_lbc_chart_version            = "1.7.2"  # AWS Load Balancer Controller (LBC)
 redis_exporter_chart_version     = "6.3.0" # Prometheus Redis Exporter (dev와 동일 유효 버전; 0.15.0은 존재하지 않는 버전)
+
+# =========================================================================
+# Grafana 어드민 비밀번호 (시크릿 — 값은 여기에 적지 말 것, CLAUDE §5)
+# =========================================================================
+# apply 시 환경변수로 주입:  export TF_VAR_grafana_admin_password='<강한 비밀번호>'
+# 또는 gitignore된 terraform.tfvars에 grafana_admin_password = "..." (커밋 금지).
+# dev는 SM 금고에 사람이 put-secret-value로 주입 — prod는 K8s Secret을 var로 주입(동치 관례).
+# grafana_admin_password = "CHANGEME-DO-NOT-COMMIT"
