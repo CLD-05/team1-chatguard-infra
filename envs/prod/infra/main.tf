@@ -84,7 +84,8 @@ resource "aws_secretsmanager_secret_version" "chatguard_prod_secret_content" {
 
 
 module "ecr" {
-  source = "../../../modules/ecr"
+  source       = "../../../modules/ecr"
+  force_delete = true # H3/#10: prod 매일 destroy 시 이미지가 남아 ECR 삭제가 막히는 것 방지(dev 동형). 모듈 default=false라 미지정 시 destroy 차단.
   repository_names = [
     "${local.name_prefix}-api-server",
     "${local.name_prefix}-ai-worker",
