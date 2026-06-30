@@ -120,20 +120,35 @@ data "aws_iam_policy_document" "eso" {
       "secretsmanager:GetSecretValue",
       "secretsmanager:DescribeSecret",
     ]
-    # team1-${env}-* 시크릿(예: team1-prod-jwt-credentials) — 최소권한.
-    # ⚠️ ESO secretsmanager resource 미확정(RDS 자동시크릿 접근 보류):
-    #   prod ESO는 config prod ExternalSecret에서 DB_USER/DB_PASSWORD를 RDS 자동관리 시크릿
-    #   rds!db-ea17e5bc-382e-44dd-9b70-03502aa99eec 에서 읽는다 → 이 패턴(team1-prod-*)엔 매칭 안 됨.
-    #   경계(TeamRuntimeBoundary) 검증 후 아래 중 하나를 resources에 추가하여 활성화:
-    #     옵션1(와일드카드, 매일 destroy/RDS 재생성에 견고):
-    #       "arn:aws:secretsmanager:ap-northeast-2:${data.aws_caller_identity.current.account_id}:secret:rds!db-*"
-    #       → 공유계정 광역. TeamRuntimeBoundary가 secretsmanager를 team1 범위로 제한하는지 확인 후에만.
-    #     옵션2(최소권한, config 핀 UUID 정합 / 재생성 시 갱신 필요):
-    #       "arn:aws:secretsmanager:ap-northeast-2:${data.aws_caller_identity.current.account_id}:secret:rds!db-ea17e5bc-382e-44dd-9b70-03502aa99eec-*"
-    #   운전자가 작업창에서 get-policy-version으로 경계의 secretsmanager 제한 범위 확인 후 결정.
-    #   ※ 이게 확정·활성화되기 전엔 prod DB 자격증명 sync가 동작하지 않음(후속 필수).
-    resources = ["arn:aws:secretsmanager:ap-northeast-2:${data.aws_caller_identity.current.account_id}:secret:team1-${var.env}-*"]
+    # 경계(TeamRuntimeBoundary)는 secretsmanager를 team1-*로 제한하지 않음(NotAction 방식 — 위험 IAM·결제·리전만
+    # 차단, secretsmanager는 Resource:* 허용) → 다른 팀 격리 책임은 본 정책 자신에게 있다.
+    # team1-${env}-*: jwt-credentials 등. rds!db-*: config prod ExternalSecret이 DB_USER/DB_PASSWORD를 읽는
+    #   RDS 자동관리 시크릿(rds!db-ea17e5bc-…). UUID가 매일 destroy로 변동 → 와일드카드 불가피(계정·리전 한정).
+    # ★잔여 노출(빚): 같은 계정 다른 팀 RDS 시크릿 조회 권한 존재(현실 조회는 config가 핀한 우리 UUID뿐).
+    #   최소권한 회복 = D56(RDS state 분리로 UUID 영속) 후 특정 UUID 핀(옵션2)으로 좁힐 것.
+    resources = [
+      "arn:aws:secretsmanager:ap-northeast-2:${data.aws_caller_identity.current.account_id}:secret:team1-${var.env}-*",
+      "arn:aws:secretsmanager:ap-northeast-2:${data.aws_caller_identity.current.account_id}:secret:rds!db-*",
+    ]
   }
+
+  # RDS 자동관리 시크릿(rds!db-…)은 KMS(aws/secretsmanager 관리키)로 암호화 → ESO 복호화 권한 필요.
+  # database 모듈이 커스텀 KMS 미지정 → account·region 단위 aws/secretsmanager 관리키 1개로 고정
+  #   (이 키가 RDS 자동시크릿·team1-prod-* 모두를 암호화. 2026-06-30 describe-key로 ARN 확인).
+  # resource를 그 키 ARN으로 한정 + ViaService(Secrets Manager 경유)로 이중 제한 → ["*"] 과확장 회피.
+  statement {
+    sid     = "DecryptSecretsViaSecretsManager"
+    effect  = "Allow"
+    actions = ["kms:Decrypt"]
+    # aws/secretsmanager 관리형 키 — 계정·리전당 고정, 매일 destroy/apply에도 ARN 불변(RDS UUID와 달리).
+    resources = ["arn:aws:kms:ap-northeast-2:${data.aws_caller_identity.current.account_id}:key/b9cbb661-534e-47ff-a751-6e1b8c80271e"]
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["secretsmanager.ap-northeast-2.amazonaws.com"]
+    }
+  }
+
   statement {
     effect    = "Allow"
     actions   = ["secretsmanager:ListSecrets"]
