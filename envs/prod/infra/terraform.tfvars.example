@@ -6,6 +6,11 @@ eks_instance_types = ["m7g.large"] # D53: arm(m type). caller의 ami_type=AL2023
 eks_desired_size   = 3 # 가용구역 3곳에 분산 배치 (HA)
 rds_instance_class = "db.t4g.small"
 redis_node_type    = "cache.t4g.small"
+
+# D54: 서브넷·NAT를 배치할 AZ 명시 리스트. prod=3AZ(HA·FIS AZ장애 데모 전제, eks_desired_size=3과 정합).
+availability_zones = ["ap-northeast-2a", "ap-northeast-2b", "ap-northeast-2c"]
+single_nat_gateway = false # D54: prod=AZ별 NAT + AZ별 private RT(HA). dev은 true(단일 NAT).
+
 # (보류) 도메인/Route53 — DESIGN D48, 현재 미사용. route53 모듈·domain_name 변수 제거에 따라 주석 처리.
 # domain_name        = "chatguard.store"
 
