@@ -67,7 +67,29 @@ resource "kubernetes_secret" "argocd_cluster_registration" {
 }
 
 # ------------------------------------------------------------------------------
-# 📊 2. Prometheus & Grafana 모니터링 스택 주입 
+# 🔐 Grafana 어드민 자격증명 Secret — 아래 kube-prometheus-stack의 grafana.admin.existingSecret이 참조.
+#   차트(grafana 8.10.x)는 이 Secret에서 admin-user·admin-password 키를 GF_SECURITY_ADMIN_USER/PASSWORD로
+#   읽는다(values.yaml admin.userKey/passwordKey 기본값). helm_release보다 먼저 monitoring ns에 존재해야
+#   Grafana 파드가 기동(없으면 CreateContainerConfigError). 값(admin-password)은 코드/git 미커밋 —
+#   apply 시 var.grafana_admin_password(TF_VAR 또는 gitignore된 terraform.tfvars)로 주입. dev grafana·jwt
+#   수동주입과 동일 관례(CLAUDE §5: 시크릿 원문 코드·git 금지).
+# ------------------------------------------------------------------------------
+resource "kubernetes_secret" "grafana_admin" {
+  metadata {
+    name      = "grafana-admin-credentials"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  type = "Opaque"
+
+  data = {
+    "admin-user"     = "admin"
+    "admin-password" = var.grafana_admin_password
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 📊 2. Prometheus & Grafana 모니터링 스택 주입
 # ------------------------------------------------------------------------------
 resource "helm_release" "prometheus_stack" {
   name             = "kube-prometheus-stack"
@@ -75,15 +97,17 @@ resource "helm_release" "prometheus_stack" {
   chart            = "kube-prometheus-stack"
   version          = var.prometheus_stack_version
   namespace        = "monitoring"
-  create_namespace = true
+  create_namespace = false # monitoring ns는 TF 소유로 승격(namespaces.tf) — grafana admin secret을 helm보다 먼저 이 ns에 생성하기 위함
 
   values = [
     yamlencode({
       grafana = {
         enabled = true
         admin = {
-          existingSecret   = "grafana-admin-credentials"
-          adminPasswordKey = "password"
+          # adminPasswordKey(차트에 없는 무효 키)는 제거. 차트 정식 필드는 userKey/passwordKey이고
+          # 기본값이 admin-user·admin-password — kubernetes_secret.grafana_admin이 그 두 키를 그대로
+          # 공급하므로 existingSecret만 지정하면 정합(커스텀 키 불필요).
+          existingSecret = "grafana-admin-credentials"
         }
         # D55: 사이드카가 chatguard ns의 대시보드 ConfigMap(config PR #46)을 인식하도록.
         # 기본값(null)은 릴리스 ns(monitoring)만 감시 → chatguard ns CM 미인식.
@@ -95,6 +119,8 @@ resource "helm_release" "prometheus_stack" {
       }
     })
   ]
+
+  depends_on = [kubernetes_secret.grafana_admin] # secret 선존재 보장(없으면 grafana 파드 CreateContainerConfigError)
 }
 
 # ------------------------------------------------------------------------------
