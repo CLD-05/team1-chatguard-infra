@@ -116,3 +116,46 @@ resource "helm_release" "keda" {
     })
   ]
 }
+
+# ------------------------------------------------------------------------------
+# 📈 4. Prometheus Adapter — Custom Metrics API(ws_active_connections HPA 메트릭). dev main.tf 복제.
+# ------------------------------------------------------------------------------
+resource "helm_release" "prometheus_adapter" {
+  name             = "prometheus-adapter"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "prometheus-adapter"
+  version          = var.prometheus_adapter_chart_version
+  namespace        = "monitoring"
+  create_namespace = false
+
+  values = [
+    yamlencode({
+      prometheus = {
+        url  = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local"
+        port = 9090
+      }
+
+      rules = {
+        default = false
+
+        custom = [
+          {
+            seriesQuery = "ws_active_connections{namespace!=\"\",pod!=\"\"}"
+            resources = {
+              template = "<<.Resource>>"
+            }
+            name = {
+              matches = "^(.*)$"
+              as      = "ws_active_connections_per_pod" # HPA 서류에서 불러올 최종 이름
+            }
+            metricsQuery = "sum(ws_active_connections{<<.LabelMatchers>>}) by (<<.GroupBy>>)"
+          }
+        ]
+      }
+    })
+  ]
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
