@@ -13,6 +13,10 @@ module "network" {
   vpc_name = "${local.name_prefix}-vpc"
 
   public_subnet_extra_tags = { "kubernetes.io/role/elb" = "1" } # ALB(인터넷)용 서브넷 디스커버리 태그 — LBC가 public 서브넷 식별. D47
+
+  # D54: dev=2AZ·단일 NAT(비용). single_nat_gateway는 모듈 default(true)와 동일하나 명시.
+  availability_zones = var.availability_zones
+  single_nat_gateway = var.single_nat_gateway
 }
 
 # 쿠버네티스 컴퓨팅 기지 구축
