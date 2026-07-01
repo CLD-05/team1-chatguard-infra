@@ -60,3 +60,8 @@ variable "slack_channel_id" {
   description = "알람 경보 메시지를 받을 슬랙 채널(단톡방)의 고유 ID"
   default     = ""
 }
+
+variable "slack_webhook_url" {
+  type      = string
+  sensitive = true
+}

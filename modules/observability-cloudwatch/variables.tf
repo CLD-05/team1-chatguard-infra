@@ -19,3 +19,9 @@ variable "env" {
   type        = string
   description = "배포 환경 (dev 또는 prod)"
 }
+
+variable "slack_webhook_url" {
+  type        = string
+  description = "람다가 비용 리포트를 전송할 슬랙 Incoming Webhook URL"
+  sensitive   = true
+}
