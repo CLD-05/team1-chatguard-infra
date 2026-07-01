@@ -128,3 +128,19 @@ resource "aws_eks_access_policy_association" "argocd_admin_rbac" {
     type = "cluster"
   }
 }
+
+# =========================================================================
+# 관측 및 알람 인프라 기지 조립 (CloudWatch & 슬랙 챗봇 연동)
+# =========================================================================
+module "observability_cloudwatch" {
+  source = "../../../modules/observability-cloudwatch"
+
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  env                = "dev"
+  slack_channel_id   = var.slack_channel_id
+  slack_workspace_id = var.slack_workspace_id
+  db_instance_id     = module.database.db_instance_identifier
+}
