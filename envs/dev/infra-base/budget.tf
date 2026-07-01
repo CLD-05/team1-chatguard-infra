@@ -32,24 +32,23 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
   ]
 }
 
-resource "aws_budgets_budget" "team_cost_budget" {
-  name              = "team1-${var.env}-budget"
-  budget_type       = "COST"
-  limit_amount      = "100"
-  limit_unit        = "USD"
-  time_period_start = "2026-01-01_00:00"
-  time_unit         = "MONTHLY"
+resource "aws_cloudwatch_metric_alarm" "billing_prediction_alarm" {
+  provider = aws.us_east_1
 
-  cost_filter {
-    name   = "TagKeyValue"
-    values = ["user:Team$team1"]
-  }
+  alarm_name          = "team1-${var.env}-billing-estimated-charges"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "EstimatedCharges"
+  namespace           = "AWS/Billing"
+  period              = "21600" # 결제 지표는 하루에 몇 번 안 갱신되므로 6시간(21600초) 주기로 체크
+  statistic           = "Maximum"
+  threshold           = "10" # [테스트용 수치] 누적 금액이 10달러를 넘으면 알람 발생
 
-  notification {
-    comparison_operator       = "GREATER_THAN"
-    threshold                 = 80
-    threshold_type            = "PERCENTAGE"
-    notification_type         = "ACTUAL"
-    subscriber_sns_topic_arns = [aws_sns_topic.budget_alert_topic.arn]
+  alarm_description = "프로젝트 dev 환경 누적 결제 금액이 설정치($10)를 초과했습니다. 비용을 확인하세요!"
+
+  alarm_actions = [aws_sns_topic.db_alert_topic.arn]
+
+  dimensions = {
+    Currency = "USD"
   }
 }
