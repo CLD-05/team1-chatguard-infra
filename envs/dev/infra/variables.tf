@@ -62,6 +62,7 @@ variable "slack_channel_id" {
 }
 
 variable "slack_webhook_url" {
-  type      = string
-  sensitive = true
+  type        = string
+  description = "Lambda 기반 비용 리포트 전송을 위한 슬랙 Incoming Webhook URL"
+  sensitive   = true
 }

@@ -7,4 +7,5 @@ module "observability_cloudwatch" {
   slack_workspace_id = var.slack_workspace_id
   slack_channel_id   = var.slack_channel_id
   env                = var.env
+  slack_webhook_url  = var.slack_webhook_url
 }
