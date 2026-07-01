@@ -36,10 +36,10 @@ resource "helm_release" "argocd" {
     yamlencode({
       server = {
         service = {
-          type = "LoadBalancer"
-          # D49 안전망: LBC가 만든 ArgoCD NLB에 표준 태그를 자동 부착한다.
-          # 미부착 시 destroy 중단 때 Team 태그 없는 orphan NLB/SG가
-          # DenyOtherTeamResources-team1 정책에 막힌다(2026-06-23 사고).
+          type = "ClusterIP" # prod parity: dev ArgoCD도 ClusterIP(상시 NLB 제거 — 비용·orphan 표면 축소). UI는 port-forward.
+          # D49 안전망(사전 배치): 이제 dev ArgoCD는 ClusterIP라 NLB가 없어 이 태그는 무동작이다.
+          # 추후 LoadBalancer로 노출 전환 시 곧바로 Team 표준 태그가 박혀 orphan(2026-06-23 사고)을
+          # 예방하도록 미리 둔다(prod argocd와 동일 패턴).
           annotations = {
             "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = "Team=team1,Environment=dev,Project=chatguard,Owner=infra-lead"
           }
@@ -48,7 +48,9 @@ resource "helm_release" "argocd" {
     })
   ]
 
-  # B-5: LBC(webhook) Ready 이후에 argocd LoadBalancer Service를 생성 → 첫 apply 시 LBC 웹훅 레이스 제거.
+  # webhook race 방지(B-5): LBC의 service mutating webhook(failurePolicy=Fail)은 ClusterIP CREATE도 가로챔.
+  # dev argocd가 ClusterIP라도 LBC 미준비 시 "no endpoints available for aws-load-balancer-webhook-service"로
+  # 실패 → LBC Ready 후 생성.
   depends_on = [helm_release.lbc]
 }
 
