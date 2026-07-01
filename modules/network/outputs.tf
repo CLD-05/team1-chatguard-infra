@@ -3,17 +3,19 @@ output "vpc_id" {
   value       = aws_vpc.this.id
 }
 
+# ★ output 이름·타입(리스트) 절대 보존 — EKS·RDS·Redis·bastion 4소비처가 리스트로 받음(D54).
+#   서브넷이 count(splat)로 바뀌어도 이름이 같으면 소비처 무영향.
 output "public_subnet_ids" {
   description = "ALB와 Bastion이 사용할 Public 서브넷 ID 리스트"
-  value       = [aws_subnet.public_a.id, aws_subnet.public_c.id]
+  value       = aws_subnet.public[*].id
 }
 
 output "private_subnet_ids" {
   description = "EKS 클러스터 워커 노드가 위치할 Private 서브넷 ID 리스트"
-  value       = [aws_subnet.private_a.id, aws_subnet.private_c.id]
+  value       = aws_subnet.private[*].id
 }
 
 output "isolated_subnet_ids" {
   description = "RDS MySQL 및 ElastiCache Redis가 격리되어 들어갈 Isolated 서브넷 ID 리스트"
-  value       = [aws_subnet.isolated_a.id, aws_subnet.isolated_c.id]
+  value       = aws_subnet.isolated[*].id
 }

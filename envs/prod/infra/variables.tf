@@ -13,6 +13,17 @@ variable "vpc_cidr" {
   type        = string
 }
 
+# D54: network 모듈로 전달. prod=3AZ·AZ별 NAT(HA). 값은 tfvars에서 명시.
+variable "availability_zones" {
+  description = "서브넷·NAT를 배치할 AZ 명시 리스트(길이 = AZ 수). prod=3AZ(HA·FIS AZ장애 데모 전제)."
+  type        = list(string)
+}
+
+variable "single_nat_gateway" {
+  description = "true=NAT 1개 공유(비용). false=AZ별 NAT + AZ별 private RT(prod HA). D54 — prod tfvars=false."
+  type        = bool
+}
+
 variable "eks_instance_types" {
   description = "EKS 워커 노드 EC2 인스턴스 타입"
   type        = list(string)
