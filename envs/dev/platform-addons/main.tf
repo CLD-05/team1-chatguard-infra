@@ -116,6 +116,10 @@ resource "helm_release" "prometheus_stack" {
       }
     })
   ]
+
+  # webhook race 방지: prometheus_stack의 다수 Service CREATE가 LBC mutating webhook
+  # (failurePolicy=Fail)에 걸림 → LBC Ready 후 생성(dev argocd B-5와 parity).
+  depends_on = [helm_release.lbc]
 }
 
 # ==============================================================================

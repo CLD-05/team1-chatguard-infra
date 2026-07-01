@@ -180,6 +180,10 @@ resource "helm_release" "external_secrets" {
       }
     }
   })]
+
+  # webhook race 방지: external-secrets 차트가 만드는 webhook Service CREATE가 LBC mutating
+  # webhook(failurePolicy=Fail)에 걸림 → LBC Ready 후 생성.
+  depends_on = [helm_release.lbc]
 }
 
 # =============================================================================

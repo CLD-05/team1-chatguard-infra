@@ -32,6 +32,11 @@ resource "helm_release" "argocd" {
       }
     })
   ]
+
+  # webhook race 방지: LBC의 service mutating webhook(failurePolicy=Fail)은 ClusterIP CREATE도 가로챔.
+  # prod argocd는 ClusterIP라 자기 NLB는 없지만, LBC 미준비 시 "no endpoints available for
+  # aws-load-balancer-webhook-service"로 실패 → LBC Ready 후 생성. dev argocd(B-5)와 parity.
+  depends_on = [helm_release.lbc]
 }
 
 # =========================================================================
@@ -120,7 +125,9 @@ resource "helm_release" "prometheus_stack" {
     })
   ]
 
-  depends_on = [kubernetes_secret.grafana_admin] # secret 선존재 보장(없으면 grafana 파드 CreateContainerConfigError)
+  # grafana secret 선존재(없으면 grafana 파드 CreateContainerConfigError) + LBC webhook Ready
+  # (prometheus_stack이 만드는 다수 Service CREATE가 LBC mutating webhook, failurePolicy=Fail에 걸림).
+  depends_on = [kubernetes_secret.grafana_admin, helm_release.lbc]
 }
 
 # ------------------------------------------------------------------------------
@@ -141,6 +148,10 @@ resource "helm_release" "keda" {
       }
     })
   ]
+
+  # webhook race 방지: keda(metrics-apiserver·admission-webhook) Service CREATE가 LBC mutating
+  # webhook(failurePolicy=Fail)에 걸림 → LBC Ready 후 생성.
+  depends_on = [helm_release.lbc]
 }
 
 # ------------------------------------------------------------------------------

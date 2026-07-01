@@ -30,6 +30,10 @@ resource "helm_release" "keda" {
   version          = var.keda_chart_version
   namespace        = "keda"
   create_namespace = true
+
+  # webhook race 방지: keda(metrics-apiserver·admission-webhook) Service CREATE가 LBC mutating
+  # webhook(failurePolicy=Fail)에 걸림 → LBC Ready 후 생성.
+  depends_on = [helm_release.lbc]
 }
 
 # =============================================================================
@@ -171,6 +175,10 @@ resource "helm_release" "external_secrets" {
       }
     }
   })]
+
+  # webhook race 방지: external-secrets 차트가 만드는 webhook Service CREATE가 LBC mutating
+  # webhook(failurePolicy=Fail)에 걸림 → LBC Ready 후 생성.
+  depends_on = [helm_release.lbc]
 }
 
 # =============================================================================
