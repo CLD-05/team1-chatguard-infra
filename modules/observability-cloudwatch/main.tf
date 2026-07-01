@@ -109,12 +109,6 @@ resource "aws_secretsmanager_secret" "slack_webhook" {
   recovery_window_in_days = var.env == "prod" ? 7 : 0
 }
 
-# 금고 안에 실제 슬랙 웹훅 주소 밀어넣기
-resource "aws_secretsmanager_secret_version" "slack_webhook_val" {
-  secret_id     = aws_secretsmanager_secret.slack_webhook.id
-  secret_string = var.slack_webhook_url
-}
-
 # 서울 리전에 생성될 Lambda 함수 본체
 resource "aws_lambda_function" "billing_alert_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
