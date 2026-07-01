@@ -54,7 +54,7 @@ resource "aws_cloudwatch_metric_alarm" "db_connection_alarm" {
 # 서울 리전 전용 Lambda 기반 우회 비용 알람 시스템
 # =========================================================================
 
-# 1. Lambda 함수가 비용을 조회하고 슬랙을 쏠 수 있는 권한(Role) 생성
+# Lambda 함수가 비용을 조회하고 슬랙을 쏠 수 있는 권한(Role) 생성
 resource "aws_iam_role" "billing_lambda_role" {
   name                 = "team1-${var.env}-billing-lambda-role"
   permissions_boundary = "arn:aws:iam::495599735720:policy/TeamRuntimeBoundary"
@@ -69,7 +69,7 @@ resource "aws_iam_role" "billing_lambda_role" {
   })
 }
 
-# 2. 비용 조회(Cost Explorer) 및 로그 기록 권한 부여
+# 비용 조회(Cost Explorer) 및 로그 기록 권한 부여
 resource "aws_iam_role_policy" "billing_lambda_policy" {
   name = "team1-${var.env}-billing-lambda-policy"
   role = aws_iam_role.billing_lambda_role.id
@@ -83,7 +83,8 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
           "ce:GetCostAndUsage",
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents"
+          "logs:PutLogEvents",
+          "secretsmanager:GetSecretValue"
         ]
         Resource = "*"
       }
@@ -91,7 +92,7 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
   })
 }
 
-# 3. 실제 작동할 Python 코드 압축 아티팩트 지정
+# 실제 작동할 Python 코드 압축 아티팩트 지정
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/files/billing_script.zip"
@@ -102,7 +103,19 @@ data "archive_file" "lambda_zip" {
   }
 }
 
-# 4. 서울 리전에 생성될 Lambda 함수 본체
+# AWS Secrets Manager에 비밀 금고 개설
+resource "aws_secretsmanager_secret" "slack_webhook" {
+  name                    = "team1-${var.env}-slack-webhook-url"
+  recovery_window_in_days = var.env == "prod" ? 7 : 0
+}
+
+# 금고 안에 실제 슬랙 웹훅 주소 밀어넣기
+resource "aws_secretsmanager_secret_version" "slack_webhook_val" {
+  secret_id     = aws_secretsmanager_secret.slack_webhook.id
+  secret_string = var.slack_webhook_url
+}
+
+# 서울 리전에 생성될 Lambda 함수 본체
 resource "aws_lambda_function" "billing_alert_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = "team1-${var.env}-billing-alert-lambda"
@@ -114,12 +127,12 @@ resource "aws_lambda_function" "billing_alert_lambda" {
 
   environment {
     variables = {
-      SLACK_WEBHOOK_URL = var.slack_webhook_url
+      SECRET_ARN = aws_secretsmanager_secret.slack_webhook.arn
     }
   }
 }
 
-# 5. 매일 자동으로 실행되게 만드는 알람 시계 (EventBridge)
+# 매일 자동으로 실행되게 만드는 알람 시계 (EventBridge)
 resource "aws_cloudwatch_event_rule" "daily_billing_cron" {
   name                = "team1-${var.env}-daily-billing-cron"
   description         = "매일 정기적으로 비용 조회를 트리거합니다."
