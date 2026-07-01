@@ -104,12 +104,6 @@ resource "aws_s3_bucket_versioning" "banned_words_versioning" {
   }
 }
 
-# 대외 서비스 창구 도메인(Route53) 호스팅 존 조립
-module "route53" {
-  source      = "../../../modules/route53"
-  domain_name = "chatguard.store" # 👈 팀의 실제 도메인 주소(또는 임시 주소)로 세팅
-}
-
 # =========================================================================
 # ArgoCD용 IAM 역할을 EKS 최고 권한(cluster-admin)과 RBAC 매핑
 # =========================================================================
