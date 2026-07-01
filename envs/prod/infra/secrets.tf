@@ -1,7 +1,7 @@
 resource "aws_secretsmanager_secret" "redis_secret" {
   name                    = "team1-prod-redis-secrets"
   description             = "ChatGuard prod 환경 Redis 연결 정보 금고"
-  recovery_window_in_days = 7
+  recovery_window_in_days = 0 # prod 매일 destroy → 즉시 삭제 허용(복구창>0은 동일 이름 재생성 차단 → 다음날 apply가 "scheduled for deletion"으로 CreateSecret 실패). 값은 TF가 apply마다 자동 재주입(main.tf secret_version)이라 소실 무해. jwt/dev 금고와 동일 관례.
 }
 
 # =========================================================================
