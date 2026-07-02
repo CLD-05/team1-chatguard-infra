@@ -4,7 +4,7 @@ data "terraform_remote_state" "infra_base" {
   backend = "s3"
   config = {
     bucket = "tfstate-lionkdt5-team1"
-    key    = "dev/infra-base/terraform.tfstate"
+    key    = "team1/dev/infra-base/terraform.tfstate"
     region = "ap-northeast-2"
   }
 }
