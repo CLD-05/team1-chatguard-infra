@@ -10,3 +10,6 @@ vpc_cidr = "10.1.0.0/17" # dev 전용. ⚠️ prod는 10.1.128.0/17 — 절대 �
 # D54: 서브넷·NAT를 배치할 AZ 명시 리스트. dev=2AZ(2b 제외 — 기존 토폴로지 유지).
 availability_zones = ["ap-northeast-2a", "ap-northeast-2c"]
 single_nat_gateway = true # D54: dev=단일 NAT(비용). prod은 false(AZ별 NAT, HA).
+
+slack_workspace_id = "" # 슬랙 워크스페이스 고유 ID
+slack_channel_id   = "" # 알람을 받을 슬랙 단톡방 채널 ID
