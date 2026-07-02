@@ -53,3 +53,9 @@ resource "aws_budgets_budget" "team_cost_budget" {
     subscriber_sns_topic_arns = [aws_sns_topic.budget_alert_topic.arn]
   }
 }
+
+# AWS Secrets Manager에 비밀 금고 개설
+resource "aws_secretsmanager_secret" "slack_webhook" {
+  name                    = "team1-${var.env}-slack-webhook-url"
+  recovery_window_in_days = var.env == "prod" ? 7 : 0
+}

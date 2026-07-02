@@ -19,3 +19,8 @@ variable "env" {
   type        = string
   description = "배포 환경 (dev 또는 prod)"
 }
+
+variable "slack_webhook_secret_arn" {
+  type        = string
+  description = "infra-base 스택에서 영구 보존 중인 Secrets Manager 금고의 고유 ARN"
+}

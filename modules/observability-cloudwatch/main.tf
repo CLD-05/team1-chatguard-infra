@@ -89,12 +89,12 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:ap-northeast-2:495599735720:log-group:/aws/lambda/team1-${var.env}-billing-alert-lambda:*"
+        Resource = var.slack_webhook_secret_arn
       },
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = aws_secretsmanager_secret.slack_webhook.arn
+        Resource = var.slack_webhook_secret_arn
       }
     ]
   })
@@ -111,12 +111,6 @@ data "archive_file" "lambda_zip" {
   }
 }
 
-# AWS Secrets Manager에 비밀 금고 개설
-resource "aws_secretsmanager_secret" "slack_webhook" {
-  name                    = "team1-${var.env}-slack-webhook-url"
-  recovery_window_in_days = var.env == "prod" ? 7 : 0
-}
-
 # 서울 리전에 생성될 Lambda 함수 본체
 resource "aws_lambda_function" "billing_alert_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
@@ -129,7 +123,7 @@ resource "aws_lambda_function" "billing_alert_lambda" {
 
   environment {
     variables = {
-      SECRET_ARN = aws_secretsmanager_secret.slack_webhook.arn
+      SECRET_ARN = var.slack_webhook_secret_arn
       ENV        = var.env
     }
   }
