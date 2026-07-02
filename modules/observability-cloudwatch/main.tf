@@ -130,6 +130,7 @@ resource "aws_lambda_function" "billing_alert_lambda" {
   environment {
     variables = {
       SECRET_ARN = aws_secretsmanager_secret.slack_webhook.arn
+      ENV        = var.env
     }
   }
 }
