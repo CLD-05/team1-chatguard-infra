@@ -32,30 +32,13 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
   ]
 }
 
-resource "aws_budgets_budget" "team_cost_budget" {
-  name              = "team1-${var.env}-budget"
-  budget_type       = "COST"
-  limit_amount      = "100"
-  limit_unit        = "USD"
-  time_period_start = "2026-01-01_00:00"
-  time_unit         = "MONTHLY"
-
-  cost_filter {
-    name   = "TagKeyValue"
-    values = ["user:Team$team1"]
-  }
-
-  notification {
-    comparison_operator       = "GREATER_THAN"
-    threshold                 = 80
-    threshold_type            = "PERCENTAGE"
-    notification_type         = "ACTUAL"
-    subscriber_sns_topic_arns = [aws_sns_topic.budget_alert_topic.arn]
-  }
+data "aws_kms_key" "by_alias" {
+  key_id = "alias/aws/secretsmanager"
 }
 
 # AWS Secrets Manager에 비밀 금고 개설
 resource "aws_secretsmanager_secret" "slack_webhook" {
   name                    = "team1-${var.env}-slack-webhook-url"
   recovery_window_in_days = var.env == "prod" ? 7 : 0
+  kms_key_id              = data.aws_kms_key.by_alias.arn
 }
