@@ -20,12 +20,6 @@ variable "redis_exporter_chart_version" {
   description = "Prometheus Redis Exporter Helm 차트 버전"
 }
 
-variable "prometheus_adapter_chart_version" {
-  type        = string
-  description = "Prometheus Adapter (Custom Metrics API) Helm 차트 버전"
-  default     = "4.11.0"
-}
-
 variable "env" {
   type        = string
   description = "환경 구분 (dev 또는 prod)"
