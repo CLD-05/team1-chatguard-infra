@@ -89,7 +89,7 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = var.slack_webhook_secret_arn
+        Resource = "arn:aws:logs:ap-northeast-2:495599735720:log-group:/aws/lambda/team1-${var.env}-billing-alert-lambda:*"
       },
       {
         Effect   = "Allow"
