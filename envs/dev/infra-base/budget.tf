@@ -32,6 +32,10 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
   ]
 }
 
+data "aws_kms_key" "by_alias" {
+  key_id = "alias/aws/secretsmanager"
+}
+
 # AWS Secrets Manager에 비밀 금고 개설
 resource "aws_secretsmanager_secret" "slack_webhook" {
   name                    = "team1-${var.env}-slack-webhook-url"
