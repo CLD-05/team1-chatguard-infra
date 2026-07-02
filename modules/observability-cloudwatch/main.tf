@@ -86,7 +86,7 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
           "logs:PutLogEvents",
           "secretsmanager:GetSecretValue"
         ]
-        Resource = "*"
+        Resource = aws_secretsmanager_secret.slack_webhook.arn
       }
     ]
   })

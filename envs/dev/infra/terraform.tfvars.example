@@ -13,4 +13,3 @@ single_nat_gateway = true # D54: dev=단일 NAT(비용). prod은 false(AZ별 NAT
 
 slack_workspace_id = "" # 슬랙 워크스페이스 고유 ID
 slack_channel_id   = "" # 알람을 받을 슬랙 단톡방 채널 ID
-slack_webhook_url  = "" # monitoring-alerts 채널 URL
