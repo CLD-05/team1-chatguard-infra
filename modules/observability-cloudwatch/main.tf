@@ -78,14 +78,22 @@ resource "aws_iam_role_policy" "billing_lambda_policy" {
     Version = "2012-10-17"
     Statement = [
       {
+        Effect   = "Allow"
+        Action   = ["ce:GetCostAndUsage"]
+        Resource = "*"
+      },
+      {
         Effect = "Allow"
         Action = [
-          "ce:GetCostAndUsage",
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "secretsmanager:GetSecretValue"
+          "logs:PutLogEvents"
         ]
+        Resource = "arn:aws:logs:ap-northeast-2:495599735720:log-group:/aws/lambda/team1-${var.env}-billing-alert-lambda:*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
         Resource = aws_secretsmanager_secret.slack_webhook.arn
       }
     ]
