@@ -36,4 +36,5 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
 resource "aws_secretsmanager_secret" "slack_webhook" {
   name                    = "team1-${var.env}-slack-webhook-url"
   recovery_window_in_days = var.env == "prod" ? 7 : 0
+  kms_key_id              = data.aws_kms_key.by_alias.arn
 }
