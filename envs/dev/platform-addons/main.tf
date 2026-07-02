@@ -130,45 +130,5 @@ resource "helm_release" "prometheus_stack" {
 #    (remote_state output)로 연결하고, Secrets Manager 정책을 team1-${env}-* 로 최소권한화하기 위함.
 # ==============================================================================
 
-# ==============================================================================
-# 📈 4. Prometheus Adapter 주입 (Custom Metrics API 엔드포인트 활성화)
-# ==============================================================================
-resource "helm_release" "prometheus_adapter" {
-  name             = "prometheus-adapter"
-  repository       = "https://prometheus-community.github.io/helm-charts"
-  chart            = "prometheus-adapter"
-  version          = "4.11.0"
-  namespace        = "monitoring"
-  create_namespace = false
-
-  values = [
-    yamlencode({
-      prometheus = {
-        url  = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local"
-        port = 9090
-      }
-
-      rules = {
-        default = false
-
-        custom = [
-          {
-            seriesQuery = "ws_active_connections{namespace!=\"\",pod!=\"\"}"
-            resources = {
-              template = "<<.Resource>>"
-            }
-            name = {
-              matches = "^(.*)$"
-              as      = "ws_active_connections_per_pod" # HPA 서류에서 불러올 최종 이름
-            }
-            metricsQuery = "sum(ws_active_connections{<<.LabelMatchers>>}) by (<<.GroupBy>>)"
-          }
-        ]
-      }
-    })
-  ]
-
-  depends_on = [
-    helm_release.prometheus_stack
-  ]
-}
+# (제거됨) 📈 Prometheus Adapter — chat-server 스케일러 KEDA 일원화(config #58)로
+# 유일 소비자였던 커스텀 HPA가 소멸 → adapter 제거. Grafana는 raw 메트릭 직질의라 무영향.

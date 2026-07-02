@@ -24,6 +24,18 @@ variable "allowed_branches" {
   default     = ["main"]
 }
 
+variable "allowed_environments" {
+  description = "role을 가져갈 수 있는 GitHub Environment 목록. environment 선언 job의 OIDC sub는 repo:...:environment:<e>로 발급됨(승인 게이트를 AWS 인증 레벨에서 강제). 기본 비활성."
+  type        = list(string)
+  default     = []
+}
+
+variable "ecr_pull_repository_arns" {
+  description = "pull(read)만 허용할 ECR repository ARN 목록 — 이미지 승격(crane copy)의 소스용. 기본 비활성."
+  type        = list(string)
+  default     = []
+}
+
 variable "ecr_repository_arns" {
   description = "push 권한을 부여할 ECR repository ARN 목록(api-server·ai-worker·frontend)."
   type        = list(string)

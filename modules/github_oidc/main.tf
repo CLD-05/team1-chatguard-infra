@@ -7,12 +7,20 @@ locals {
   github_oidc_url = "https://token.actions.githubusercontent.com"
   oidc_audience   = "sts.amazonaws.com"
 
-  # repo:CLD-05/team1-chatguard-app:ref:refs/heads/main 형태의 sub 목록.
-  # 허용 브랜치마다 한 줄. Trust Policy의 StringLike 조건에 들어간다.
-  allowed_subs = [
-    for b in var.allowed_branches :
-    "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${b}"
-  ]
+  # Trust Policy의 StringLike 조건에 들어갈 sub 목록.
+  #  - 브랜치: repo:CLD-05/team1-chatguard-app:ref:refs/heads/main (허용 브랜치마다 한 줄)
+  #  - environment: repo:...:environment:production (environment 선언 job — 승인 게이트 통과분만)
+  # ⚠️ 두 목록이 모두 비면 condition values가 빈 배열 → 정책 오류. 호출부가 최소 한쪽은 채울 것.
+  allowed_subs = concat(
+    [
+      for b in var.allowed_branches :
+      "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${b}"
+    ],
+    [
+      for e in var.allowed_environments :
+      "repo:${var.github_org}/${var.github_repo}:environment:${e}"
+    ],
+  )
 
   # provider를 새로 만들면 그 ARN, 아니면 기존 것을 data로 조회한 ARN.
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
@@ -98,6 +106,22 @@ data "aws_iam_policy_document" "ecr_push" {
       "ecr:BatchGetImage",
     ]
     resources = var.ecr_repository_arns
+  }
+
+  # (선택) 다른 env ECR에서 pull만 허용 — 이미지 승격(crane copy)의 소스 read 최소권한.
+  # push 계열 액션은 위 EcrPush의 대상(자기 env repo)에만 남는다.
+  dynamic "statement" {
+    for_each = length(var.ecr_pull_repository_arns) > 0 ? [1] : []
+    content {
+      sid    = "EcrPullPromotionSource"
+      effect = "Allow"
+      actions = [
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchCheckLayerAvailability",
+      ]
+      resources = var.ecr_pull_repository_arns
+    }
   }
 }
 

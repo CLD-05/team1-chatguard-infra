@@ -149,7 +149,7 @@ helm uninstall kube-prometheus-stack -n monitoring
 ## 검증 (apply 후 토대 확인 — 검증된 명령)
 
 ```bash
-kubectl get pods -n monitoring         # kube-prometheus-stack(+prometheus-adapter)·redis-exporter
+kubectl get pods -n monitoring         # kube-prometheus-stack·redis-exporter
 kubectl get pods -n keda               # KEDA operator
 kubectl get pods -n external-secrets   # ESO
 kubectl get pods -n kube-system | grep aws-load-balancer-controller
@@ -301,7 +301,6 @@ terraform destroy
 | 수동① | grafana 시크릿을 매 apply 전 수동 주입(`recovery_window=0`이라 destroy 시 소멸)                                                                                                    | Apply ③의 `put-secret-value`                                                                     | ESO로 Secrets Manager 동기화(D34 최종형, config 소관) → plan이 시크릿 값에 의존하지 않게 되어 제거                               |
 | 수동② | platform-addons apply가 LBC webhook race로 1회 실패 가능                                                                                                                           | LBC 파드 Running 확인 후 재apply                                                                 | prometheus_stack 등에 LBC readiness 대기(`depends_on`)                                                                           |
 | 설계  | **EKS access entry 409 ResourceInUseException** — admin 목록(`eks_cluster_admin_principals`)에 **운전자(클러스터 생성자)가 포함**되면 `bootstrap_cluster_creator_admin_permissions=true`의 자동 admin과 `for_each` 생성이 충돌해 apply가 깨진다. **운전자가 누구든 재발**(현 목록은 5명 — cjc 포함, D35) | 충돌난 운전자(현재 cjc)의 access entry/policy **2건을 state로 import 후 apply 재개**(↓ "EKS 409 import 명령" 블록 — provider v5.100.0은 **3-파트 ID** 주의) | 근본해결: `bootstrap_cluster_creator_admin_permissions=false` 전환(단 **force-new=클러스터 재생성 위험** → 반드시 plan 검증). 운전자 바뀌면 ARN만 치환 |
-| 무해  | `prometheus_adapter`가 떠 있으나 스케일은 **KEDA-only**라 미사용                                                                                                                   | —                                                                                                | 후속 PR로 제거 예정                                                                                                              |
 | 사고③ | **(2026-06-24 실증)** 18:00 야간 차단 진입 후 `destroy/apply` 수행 시 `DeleteSubnet 403 UnauthorizedOperation` 및 `S3 PutObject AccessDenied` 에러와 함께 `errored.tfstate` 파편 발생 | 즉시 작업을 중단하고 다음 날 09:00 권한 부활 후 `terraform force-unlock <LOCK_ID>` -> `terraform state push errored.tfstate` 순으로 장부 수선 후 재개 | 18:00 임박 시 destroy 절대 착수 금지 수칙 엄수 및 인계서 행동 요령 인입 |
 
 ### EKS 409 import 명령 (Known Issues 설계행 — `envs/dev/infra`에서 실행)
