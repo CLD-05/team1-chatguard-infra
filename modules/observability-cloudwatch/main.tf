@@ -21,16 +21,6 @@ resource "aws_iam_role" "chatbot_role" {
   assume_role_policy   = data.aws_iam_policy_document.chatbot_assume.json
 }
 
-resource "aws_chatbot_slack_channel_configuration" "db_slack_notifier" {
-  configuration_name = "team1-${var.env}-db-slack-chatbot"
-  iam_role_arn       = aws_iam_role.chatbot_role.arn
-  slack_channel_id   = var.slack_channel_id
-  slack_team_id      = var.slack_workspace_id
-
-  sns_topic_arns = [
-    aws_sns_topic.db_alert_topic.arn
-  ]
-}
 
 resource "aws_cloudwatch_metric_alarm" "db_connection_alarm" {
   alarm_name          = "team1-${var.env}-rds-high-connections"
