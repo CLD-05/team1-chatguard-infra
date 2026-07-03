@@ -5,6 +5,10 @@ resource "aws_sns_topic" "budget_alert_topic" {
   kms_master_key_id = "alias/aws/sns"
 }
 
+data "aws_sns_topic" "db_alert_topic" {
+  name = "team1-${var.env}-db-alert-topic"
+}
+
 data "aws_iam_policy_document" "budget_chatbot_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -29,6 +33,17 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
 
   sns_topic_arns = [
     aws_sns_topic.budget_alert_topic.arn
+  ]
+}
+
+resource "aws_chatbot_slack_channel_configuration" "db_slack_notifier" {
+  configuration_name = "team1-${var.env}-db-slack-chatbot"
+  iam_role_arn       = aws_iam_role.budget_chatbot_role.arn
+  slack_channel_id   = var.slack_channel_id
+  slack_team_id      = var.slack_workspace_id
+
+  sns_topic_arns = [
+    data.aws_sns_topic.db_alert_topic.arn
   ]
 }
 
