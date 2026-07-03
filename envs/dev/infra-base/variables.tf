@@ -21,5 +21,5 @@ variable "env" {
 variable "db_slack_channel_id" {
   type        = string
   description = "DB 경보 알림을 수신할 모니터링 슬랙 채널 ID"
-  default     = "C0BCVUUGGET" # 솔님이 아까 찾으신 monitoring-alerts 채널 ID
+  default     = ""
 }
