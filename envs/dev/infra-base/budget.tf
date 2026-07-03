@@ -39,7 +39,7 @@ resource "aws_chatbot_slack_channel_configuration" "budget_slack_notifier" {
 resource "aws_chatbot_slack_channel_configuration" "db_slack_notifier" {
   configuration_name = "team1-${var.env}-db-slack-chatbot"
   iam_role_arn       = aws_iam_role.budget_chatbot_role.arn
-  slack_channel_id   = var.slack_channel_id
+  slack_channel_id   = var.db_slack_channel_id
   slack_team_id      = var.slack_workspace_id
 
   sns_topic_arns = [
