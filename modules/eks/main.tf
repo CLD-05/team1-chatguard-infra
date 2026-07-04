@@ -96,8 +96,8 @@ resource "aws_eks_node_group" "this" {
 
   scaling_config {
     desired_size = var.desired_size
-    max_size     = var.desired_size + 2 # 부하 테스트 대비 여유분 (+2)
-    min_size     = var.desired_size
+    max_size     = coalesce(var.max_size, var.desired_size + 2) # 미지정 시 기존 여유분(+2) 유지
+    min_size     = coalesce(var.min_size, var.desired_size)
   }
 
   update_config {

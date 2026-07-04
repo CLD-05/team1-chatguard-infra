@@ -33,6 +33,19 @@ variable "desired_size" {
   default     = 2
 }
 
+# min/max를 desired와 분리 지정할 때만 사용. null이면 기존 수식(min=desired, max=desired+2) 유지 → 안 넘기는 환경(dev) 무영향.
+variable "min_size" {
+  description = "노드그룹 최소 노드 수. null이면 desired_size와 동일(기존 동작)."
+  type        = number
+  default     = null
+}
+
+variable "max_size" {
+  description = "노드그룹 최대 노드 수. null이면 desired_size + 2(기존 동작)."
+  type        = number
+  default     = null
+}
+
 variable "iam_role_permissions_boundary" {
   type        = string
   description = "AWS IAM Role 생성 제한을 위한 Permissions Boundary ARN"

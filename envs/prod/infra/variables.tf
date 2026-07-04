@@ -34,6 +34,18 @@ variable "eks_desired_size" {
   type        = number
 }
 
+variable "eks_min_size" {
+  description = "EKS 워커 노드 최소 개수. null이면 모듈 기본(desired_size와 동일)."
+  type        = number
+  default     = null
+}
+
+variable "eks_max_size" {
+  description = "EKS 워커 노드 최대 개수. null이면 모듈 기본(desired_size + 2)."
+  type        = number
+  default     = null
+}
+
 variable "rds_instance_class" {
   description = "RDS 데이터베이스 인스턴스 사양"
   type        = string

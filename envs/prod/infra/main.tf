@@ -25,6 +25,8 @@ module "eks" {
   subnet_ids     = module.network.private_subnet_ids
   instance_types = var.eks_instance_types
   desired_size   = var.eks_desired_size
+  min_size       = var.eks_min_size # E3: desired 증설(3→5) 시에도 min 3·max 5 고정 — tfvars 주도
+  max_size       = var.eks_max_size
 
   # D53: arm 노드(m7g — m type, 부하테스트 정확도). tfvars eks_instance_types=m7g.large와 동반.
   ami_type = "AL2023_ARM_64_STANDARD"
