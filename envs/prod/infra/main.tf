@@ -2,6 +2,9 @@
 
 data "aws_caller_identity" "current" {}
 
+# provider default_tags(Team/Environment/Project/Owner)를 그대로 노드 인스턴스 태그로 재사용 — 리터럴 중복·드리프트 방지.
+data "aws_default_tags" "current" {}
+
 locals {
   name_prefix = "${var.team}-${var.env}"
 }
@@ -36,6 +39,8 @@ module "eks" {
   public_access_cidrs = var.eks_public_access_cidrs
 
   cluster_admin_principals = var.eks_cluster_admin_principals # 팀원 IAM 유저 kubectl 접근(EKS access entry). D35
+
+  node_instance_tags = data.aws_default_tags.current.tags # ASG-런치 인스턴스/볼륨에 Team 등 표준 태그 전파(default_tags 미전파 보완)
 }
 
 module "database" {

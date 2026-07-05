@@ -83,13 +83,36 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOn
 }
 
 # =========================================================================
+# 4-0. 노드 인스턴스/볼륨 태깅용 최소 Launch Template
+# =========================================================================
+# provider default_tags는 노드그룹 리소스엔 붙지만 ASG-런치 EC2 인스턴스엔 전파되지 않음 →
+# tag_specifications로 인스턴스·EBS 볼륨에 직접 주입(Team 태그 부재 시 DenyOtherTeamResources로 자체 조작 차단).
+# 인스턴스타입·AMI·SG·IAM은 넣지 않음 → 노드그룹의 instance_types/ami_type 및 EKS 자동 cluster SG를 그대로 유지.
+resource "aws_launch_template" "node" {
+  count       = length(var.node_instance_tags) > 0 ? 1 : 0
+  name_prefix = "${var.cluster_name}-ng-"
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = var.node_instance_tags
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+    tags          = var.node_instance_tags
+  }
+}
+
+# =========================================================================
 # 4. EKS 관리형 노드 그룹 생성 (t3.medium 사양 조립)
 # =========================================================================
 resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.cluster_name}-ng"
-  node_role_arn   = aws_iam_role.node.arn
-  subnet_ids      = var.subnet_ids
+  cluster_name = aws_eks_cluster.this.name
+  # node_group_name_prefix: 무중단 blue/green(create_before_destroy) 시 구 NG와 이름 충돌 없이 유니크 접미사 생성.
+  # 고정 node_group_name + create_before_destroy는 CreateNodegroup 이름충돌로 실패하므로 prefix 방식 채택.
+  node_group_name_prefix = "${var.cluster_name}-ng-"
+  node_role_arn          = aws_iam_role.node.arn
+  subnet_ids             = var.subnet_ids
 
   ami_type       = var.ami_type # D53: null=AWS 기본(x86), arm은 AL2023_ARM_64_STANDARD. instance_types와 동반 필수(ForceNew).
   instance_types = var.instance_types
@@ -104,11 +127,25 @@ resource "aws_eks_node_group" "this" {
     max_unavailable = 1
   }
 
+  # node_instance_tags 지정 시에만 커스텀 LT 부착 → 인스턴스/볼륨 태깅. 미지정이면 EKS 자동 LT 유지.
+  dynamic "launch_template" {
+    for_each = length(var.node_instance_tags) > 0 ? [1] : []
+    content {
+      id      = aws_launch_template.node[0].id
+      version = aws_launch_template.node[0].latest_version
+    }
+  }
+
   depends_on = [
     aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly
   ]
+
+  # 무중단 blue/green: 새 NG를 먼저 생성한 뒤 구 NG를 제거(노드 공백 최소화).
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # =========================================================================
