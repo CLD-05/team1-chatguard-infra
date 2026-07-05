@@ -25,6 +25,30 @@ resource "aws_secretsmanager_secret" "jwt_secret" {
 }
 
 # =========================================================================
+# Alertmanager Slack Webhook 금고 — platform-addons의 ExternalSecret(monitoring ns)이
+# 원문(raw string)을 읽어 k8s Secret으로 동기화 → Alertmanager가 파일 마운트로 참조(slack_api_url_file).
+# §0-3 진단 후속: 룰은 발화하나 receiver 부재 → Slack 경로 신설(DESIGN D6/B-4).
+#   - 이름은 team1-prod-* 필수: prod ESO role 가독 범위가 secret:team1-prod-* (platform-addons addons.tf).
+#   - KMS는 관리키(alias/aws/secretsmanager) 고정: ESO kms:Decrypt가 그 키에 한정 → CMK 쓰면 복호화 실패.
+# =========================================================================
+resource "aws_secretsmanager_secret" "alertmanager_slack_webhook" {
+  name                    = "team1-prod-alertmanager-slack-webhook"
+  description             = "ChatGuard prod Alertmanager Slack Webhook URL 금고(값 수동 주입, raw string)"
+  recovery_window_in_days = 0 # prod 매일 destroy → 즉시 삭제 허용(복구창>0은 동일 이름 재생성 차단). redis/jwt 금고와 동일 관례.
+
+  tags = {
+    Name = "team1-prod-alertmanager-slack-webhook"
+  }
+
+  # 컨테이너만 생성 — 값(Webhook URL 원문)은 수동 주입(CLAUDE §5: 시크릿 원문 코드·state 금지):
+  #   aws secretsmanager put-secret-value --secret-id team1-prod-alertmanager-slack-webhook \
+  #     --secret-string 'https://hooks.slack.com/services/…' --region ap-northeast-2 --profile final
+  #   (JSON 아님 — ExternalSecret이 property 없이 SecretString 전체를 raw URL로 읽음)
+  #   매일 destroy + recovery_window=0 → 값이 destroy마다 소실 → apply 후 재주입 필요(jwt와 동일).
+  #   향후 이 금고에 TF secret_version을 추가한다면 반드시 lifecycle { ignore_changes = [secret_string] }.
+}
+
+# =========================================================================
 # ArgoCD EKS 조작을 위한 관리자 IAM 역할 생성
 # =========================================================================
 resource "aws_iam_role" "eks_admin_role" {

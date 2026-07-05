@@ -97,6 +97,46 @@ resource "kubernetes_secret" "grafana_admin" {
 }
 
 # ------------------------------------------------------------------------------
+# 🔔 Alertmanager Slack Webhook 주입선 — Secrets Manager 금고(team1-prod-alertmanager-slack-webhook,
+#   envs/prod/infra/secrets.tf)를 기존 ESO(ClusterSecretStore team1-prod-aws-secret-store, config 레포 정의)로
+#   monitoring ns의 k8s Secret에 동기화. 아래 prometheus_stack의 alertmanagerSpec.secrets가 이 Secret을
+#   파드에 마운트해 slack_api_url_file로 참조 — Webhook 원문은 git·state 어디에도 없음(CLAUDE §5).
+#   ExternalSecret을 여기(platform-addons)에 두는 근거: monitoring ns·grafana-admin secret 등 모니터링
+#   스택 부속은 platform-addons TF 소유이고, infra-secure-check P2도 "ESO는 이미 레포 책임 범위"로
+#   인프라측 ESO 주입을 권고. (context CLAUDE §4의 ExternalSecret=config 소유는 앱 도메인(chatguard ns) 맥락)
+# ------------------------------------------------------------------------------
+resource "kubernetes_manifest" "alertmanager_slack_webhook" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1beta1"
+    kind       = "ExternalSecret"
+    metadata = {
+      name      = "alertmanager-slack-webhook"
+      namespace = kubernetes_namespace.monitoring.metadata[0].name
+    }
+    spec = {
+      refreshInterval = "1h" # config 레포 ExternalSecret 관례와 동일
+      secretStoreRef = {
+        name = "team1-prod-aws-secret-store" # config overlays/prod/clustersecretstore.yaml(namePrefix 적용명)과 정합
+        kind = "ClusterSecretStore"
+      }
+      target = {
+        name           = "alertmanager-slack-webhook"
+        creationPolicy = "Owner"
+      }
+      data = [{
+        secretKey = "slack_webhook_url"
+        remoteRef = {
+          key = "team1-prod-alertmanager-slack-webhook" # property 없음 = SecretString 원문(raw URL) 전체
+        }
+      }]
+    }
+  }
+
+  # ESO CRD·컨트롤러 선행(installCRDs=true) — 없으면 kind 미인식으로 생성 실패
+  depends_on = [helm_release.external_secrets]
+}
+
+# ------------------------------------------------------------------------------
 # 📊 2. Prometheus & Grafana 모니터링 스택 주입
 # ------------------------------------------------------------------------------
 resource "helm_release" "prometheus_stack" {
@@ -125,12 +165,59 @@ resource "helm_release" "prometheus_stack" {
           }
         }
       }
+      # §0-3 진단 후속: PrometheusRule 3종은 발화하나(E2 실측) alertmanager 설정 블록 부재로
+      # 차트 기본 null receiver가 흡수 → Slack 경로 신설(DESIGN D6/B-4). severity 기반 단일 분기만(과설계 금지).
+      alertmanager = {
+        config = {
+          global = {
+            # Webhook은 값이 아니라 파일 경로만 — alertmanagerSpec.secrets 마운트 규약:
+            # /etc/alertmanager/secrets/<Secret명>/<key> (위 kubernetes_manifest가 동기화)
+            slack_api_url_file = "/etc/alertmanager/secrets/alertmanager-slack-webhook/slack_webhook_url"
+          }
+          route = {
+            # 차트 기본값을 그대로 명시 — 아래 routes/receivers "리스트"는 helm 머지에서 기본을
+            # 통째 대체하므로, 기본 라우트(Watchdog→null)와 null receiver를 반드시 재포함해야 함.
+            group_by        = ["namespace"]
+            group_wait      = "30s"
+            group_interval  = "5m"
+            repeat_interval = "12h"
+            receiver        = "null"
+            routes = [
+              # 차트 기본 복원: 항상 발화하는 Watchdog(heartbeat)이 Slack으로 새지 않게
+              {
+                receiver = "null"
+                matchers = ["alertname = \"Watchdog\""]
+              },
+              # 현행 룰 3종 전부 도달: ModerationLatencyHigh·ModerationQueueBacklog(warning),
+              # ModerationWorkerDown(critical) — config 레포 PrometheusRule의 severity 라벨 기준
+              {
+                receiver = "slack-chatguard"
+                matchers = ["severity =~ \"warning|critical\""]
+              }
+            ]
+          }
+          receivers = [
+            { name = "null" }, # root receiver 참조 대상 — 리스트 통째 대체라 재포함
+            {
+              name = "slack-chatguard"
+              slack_configs = [{
+                send_resolved = true
+              }]
+            }
+          ]
+        }
+        alertmanagerSpec = {
+          # ExternalSecret이 동기화한 k8s Secret을 Alertmanager 파드에 마운트
+          secrets = ["alertmanager-slack-webhook"]
+        }
+      }
     })
   ]
 
   # grafana secret 선존재(없으면 grafana 파드 CreateContainerConfigError) + LBC webhook Ready
-  # (prometheus_stack이 만드는 다수 Service CREATE가 LBC mutating webhook, failurePolicy=Fail에 걸림).
-  depends_on = [kubernetes_secret.grafana_admin, helm_release.lbc]
+  # (prometheus_stack이 만드는 다수 Service CREATE가 LBC mutating webhook, failurePolicy=Fail에 걸림)
+  # + alertmanager가 마운트할 webhook Secret 동기화 선행(ExternalSecret).
+  depends_on = [kubernetes_secret.grafana_admin, helm_release.lbc, kubernetes_manifest.alertmanager_slack_webhook]
 }
 
 # ------------------------------------------------------------------------------
