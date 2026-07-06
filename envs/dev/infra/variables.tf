@@ -57,6 +57,12 @@ variable "slack_workspace_id" {
 
 variable "slack_channel_id" {
   type        = string
-  description = "알람 경보 메시지를 받을 슬랙 채널(단톡방)의 고유 ID"
+  description = "비용 알람 경보 메시지를 받을 슬랙 채널(단톡방)의 고유 ID"
+  default     = ""
+}
+
+variable "db_slack_channel_id" {
+  type        = string
+  description = "DB 경보 알림을 수신할 모니터링 슬랙 채널 ID"
   default     = ""
 }
