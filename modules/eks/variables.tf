@@ -63,3 +63,12 @@ variable "cluster_admin_principals" {
   type        = list(string)
   default     = []
 }
+
+# 노드 ASG가 런타임 생성하는 EC2 인스턴스/EBS 볼륨에 부착할 태그.
+# provider default_tags는 노드그룹 리소스엔 붙지만 ASG-런치 인스턴스엔 전파 안 됨 → launch template tag_specifications로 주입.
+# 빈 맵(default) = 커스텀 launch template 미생성(기존 동작 유지). ami_type/min/max와 동일한 opt-in 패턴.
+variable "node_instance_tags" {
+  description = "노드 인스턴스/볼륨에 부착할 태그(default_tags 미전파 보완). 빈 맵이면 커스텀 LT 미사용."
+  type        = map(string)
+  default     = {}
+}
