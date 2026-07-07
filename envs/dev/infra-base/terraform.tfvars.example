@@ -1,3 +1,3 @@
-slack_workspace_id  = ""  # 슬랙 워크스페이스 고유 ID
-db_slack_channel_id = ""  # 슬랙 모니터링 채널 ID
-slack_channel_id    = ""  # 슬랙 모니터링 채널 ID
+slack_workspace_id  = "" # 슬랙 워크스페이스 고유 ID
+db_slack_channel_id = "" # 슬랙 모니터링 채널 ID
+slack_channel_id    = "" # team-전체 채널 ID

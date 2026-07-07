@@ -12,14 +12,14 @@ variable "slack_channel_id" {
   default     = ""
 }
 
-variable "env" {
-  type        = string
-  description = "배포 환경 (dev 또는 prod)"
-  default     = "dev"
-}
-
 variable "db_slack_channel_id" {
   type        = string
   description = "DB 경보 알림을 수신할 모니터링 슬랙 채널 ID"
   default     = ""
+}
+
+variable "env" {
+  type        = string
+  description = "배포 환경 (dev 또는 prod)"
+  default     = "dev"
 }
